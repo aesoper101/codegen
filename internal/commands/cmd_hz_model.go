@@ -15,6 +15,8 @@ func NewHzModelCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			skip, _ := cmd.Flags().GetBool("yes")
 			input, _ := cmd.Flags().GetString("input")
+			outDir, _ := cmd.Flags().GetString("out")
+
 			if input == "" && !skip {
 				if err := huh.NewInput().Title("Please provide an input directory").Validate(func(s string) error {
 					stat, err := os.Stat(s)
@@ -32,7 +34,6 @@ func NewHzModelCommand() *cobra.Command {
 				input = "idl"
 			}
 
-			outDir, _ := cmd.Flags().GetString("out")
 			if outDir == "" && !skip {
 				if err := huh.NewInput().Title("Please provide an output directory").Value(&outDir).Run(); err != nil {
 					return err
