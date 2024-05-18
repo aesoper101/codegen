@@ -41,7 +41,11 @@ go.work
 !README.md
 !LICENSE
 
-# !Makefile
+!Makefile
+!Dockerfile
+!docker-compose.yml
+!.golangci.yml
+
 
 # ...even if they are in subdirectories
 !*/
