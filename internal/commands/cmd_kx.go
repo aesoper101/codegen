@@ -14,5 +14,4 @@ func NewKxCommand() *cobra.Command {
 }
 
 func setupKitexCommandFlags(cmd *cobra.Command) {
-
 }

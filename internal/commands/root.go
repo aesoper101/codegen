@@ -24,5 +24,4 @@ func NewCodegenCommand() *cobra.Command {
 }
 
 func setupCodegenCommandFlags(cmd *cobra.Command) {
-
 }

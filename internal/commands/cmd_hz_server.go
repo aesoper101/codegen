@@ -16,5 +16,4 @@ func NewHzServerCommand() *cobra.Command {
 }
 
 func setupHzServerCommandFlags(cmd *cobra.Command) {
-
 }

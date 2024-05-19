@@ -1,9 +1,10 @@
 package commands
 
 import (
+	"os/exec"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
-	"os/exec"
 )
 
 var _ tea.Model = (*installEnvModel)(nil)
@@ -101,7 +102,7 @@ func (m installEnvModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	return m, nil
+	return m, tea.Quit
 }
 
 func (m installEnvModel) View() string {

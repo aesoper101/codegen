@@ -7,9 +7,9 @@ import (
 
 func NewHzModelCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "model",
-		Short: "Generate model code",
-		//PreRunE: envCheckPreRunE,
+		Use:     "model",
+		Short:   "Generate model code",
+		PreRunE: envCheckPreRunE,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			input, _ := cmd.Flags().GetString("input")
 			outDir, _ := cmd.Flags().GetString("out")

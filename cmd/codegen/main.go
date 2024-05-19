@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/aesoper101/codegen/internal/commands"
 	"os"
+
+	"github.com/aesoper101/codegen/internal/commands"
 )
 
 func main() {

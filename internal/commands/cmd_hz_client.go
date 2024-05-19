@@ -16,6 +16,4 @@ func NewHzClientCommand() *cobra.Command {
 	return cmd
 }
 
-func setupHzClientCommandFlags(cmd *cobra.Command) {
-
-}
+func setupHzClientCommandFlags(cmd *cobra.Command) {}

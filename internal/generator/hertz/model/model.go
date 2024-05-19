@@ -2,13 +2,14 @@ package hzmodel
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+
 	"github.com/aesoper101/codegen/internal/generator"
 	"github.com/aesoper101/x/filex"
 	"github.com/aesoper101/x/golangx"
 	"github.com/charmbracelet/huh"
-	"os"
-	"os/exec"
-	"path/filepath"
 )
 
 var _ generator.Generator = (*Generator)(nil)
@@ -88,5 +89,5 @@ func (m *Generator) runCmd(idl string) error {
 }
 
 func (m *Generator) Name() string {
-	return "HertzModelGenerator"
+	return "HertzModel"
 }
