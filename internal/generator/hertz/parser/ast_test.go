@@ -1,8 +1,10 @@
 package parser
 
 import (
+	"fmt"
+	"github.com/aesoper101/codegen/internal/generator/hertz/config"
+	"github.com/aesoper101/x/flagx"
 	"github.com/aesoper101/x/tablewriterx"
-	"github.com/cloudwego/thriftgo/parser"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -43,19 +45,38 @@ service StudentApi {
 }
 `
 
-func Test_astToService(t *testing.T) {
-	thrift, err := parser.ParseString("student_api.thrift", testIdlContent)
-	require.Nil(t, err)
-	require.NotNil(t, thrift)
-
-	services, err := astToService(thrift)
-	require.Nil(t, err)
-	require.NotEmpty(t, services)
-
+func printTable(data interface{}) {
 	tab := tablewriterx.NewWriter()
+	_ = tab.SetStructs(data)
+	tab.EnableBorder(true)
+	tab.SetAutoWrapText(true)
+	tab.SetTablePadding("  ")
+	tab.Render()
+}
+func Test_astToService(t *testing.T) {
+	args := config.NewArgument()
 
-	err = tab.SetStructs(services)
+	fg := flagx.NewFlagSet("test")
+	fg.StringSlice("idl", []string{}, "thrift idl file")
+	fg.String("model_dir", "./model", "model dir")
+
+	err := fg.Parse([]string{
+		"--idl", "student_api.thrift",
+		"--model_dir", "model",
+	})
 	require.Nil(t, err)
 
-	tab.Render()
+	nArgs, err := args.Parse(fg, "model")
+	require.Nil(t, err)
+
+	fmt.Printf("%+v\n", nArgs)
+
+	p, err := New(WithArgument(nArgs))
+
+	require.Nil(t, err)
+	require.NotNil(t, p)
+
+	services, err := p.Parse(args)
+	printTable(services)
+
 }

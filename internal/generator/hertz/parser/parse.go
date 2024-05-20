@@ -1,20 +1,35 @@
 package parser
 
 import (
-	"github.com/aesoper101/x/filex"
-	"github.com/cloudwego/thriftgo/parser"
-	"io/fs"
-	"path/filepath"
+	"fmt"
+	"github.com/aesoper101/codegen/internal/generator/hertz/config"
+	"github.com/cloudwego/hertz/cmd/hz/generator"
+	"github.com/cloudwego/hertz/cmd/hz/generator/model"
+	"github.com/cloudwego/hertz/cmd/hz/util"
+	"github.com/cloudwego/thriftgo/generator/backend"
+	"github.com/cloudwego/thriftgo/generator/golang"
+	"github.com/cloudwego/thriftgo/plugin"
+	"io"
+	"os"
 )
 
 type Parser struct {
-	idlPath string
+	args *config.Argument
 }
 
 type Option func(parser *Parser) error
 
+func WithArgument(args *config.Argument) Option {
+	return func(parser *Parser) error {
+		parser.args = args
+		return nil
+	}
+}
+
 func New(opts ...Option) (*Parser, error) {
-	p := &Parser{idlPath: "idl"}
+	p := &Parser{
+		args: config.NewArgument(),
+	}
 	for _, opt := range opts {
 		if err := opt(p); err != nil {
 			return nil, err
@@ -24,54 +39,41 @@ func New(opts ...Option) (*Parser, error) {
 	return p, nil
 }
 
-func (p *Parser) Parse() ([]*Service, error) {
-	files, err := p.getAllThriftFile()
+func (p *Parser) Parse(args *config.Argument) ([]*generator.Service, error) {
+	return p.parseFile(args)
+}
+
+func (p *Parser) parseFile(args *config.Argument) ([]*generator.Service, error) {
+	req, err := p.handleRequest()
 	if err != nil {
 		return nil, err
 	}
-
-	var out []*Service
-	for _, file := range files {
-		service, err := p.parseFile(file)
-		if err != nil {
-			return nil, err
-		}
-
-		out = append(out, service...)
+	thriftgoUtil = golang.NewCodeUtils(backend.DummyLogFunc())
+	if err := thriftgoUtil.HandleOptions(req.GeneratorParameters); err != nil {
+		return nil, err
 	}
 
-	return out, err
-}
+	ast := req.GetAST()
 
-func (p *Parser) parseFile(path string) ([]*Service, error) {
-	astThrift, err := parser.ParseFile(path, []string{}, true)
+	pkgMap := args.OptPkgMap
+	pkg := getGoPackage(ast, pkgMap)
+	main := &model.Model{
+		FilePath:    ast.Filename,
+		Package:     pkg,
+		PackageName: util.SplitPackageName(pkg, ""),
+	}
+	fmt.Printf("%+v\n", main)
+	rs, err := NewResolver(ast, main, pkgMap)
 	if err != nil {
 		return nil, err
 	}
-	return astToService(astThrift)
+	return astToService(ast, rs, args)
 }
 
-func (p *Parser) getAllThriftFile() ([]string, error) {
-	var paths []string
-	if filex.IsDir(p.idlPath) {
-		err := filepath.WalkDir(p.idlPath, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !d.IsDir() {
-				if ext := filepath.Ext(path); ext == ".thrift" {
-					paths = append(paths, path)
-				}
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return nil, err
-		}
+func (p *Parser) handleRequest() (*plugin.Request, error) {
+	data, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return nil, err
 	}
-
-	return paths, nil
+	return plugin.UnmarshalRequest(data)
 }

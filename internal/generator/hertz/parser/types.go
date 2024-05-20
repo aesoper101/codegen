@@ -2,9 +2,21 @@ package parser
 
 type Service struct {
 	Name    string
-	Methods []Method
+	Methods []*HTTPMethod
 }
 
-type Method struct {
-	Name string
+type HTTPMethod struct {
+	Name               string
+	HTTPMethod         string
+	Comment            string
+	RequestTypeName    string
+	RequestTypePackage string
+	RequestTypeRawName string
+	ReturnTypeName     string
+	ReturnTypePackage  string
+	ReturnTypeRawName  string
+	Path               string
+	Serializer         string
+	RefPackage         string // handler import dir
+	RefPackageAlias    string // handler import alias
 }
