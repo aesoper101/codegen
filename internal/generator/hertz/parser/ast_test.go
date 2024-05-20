@@ -76,7 +76,9 @@ func Test_astToService(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, p)
 
-	services, err := p.Parse(args)
-	printTable(services)
+	services, err := p.Parse()
+	require.Nil(t, err)
+
+	printTable(services[0].Methods)
 
 }
