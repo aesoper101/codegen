@@ -3,6 +3,7 @@ package parser
 import (
 	"fmt"
 	"github.com/aesoper101/codegen/internal/generator/hertz/config"
+	"github.com/aesoper101/x/tablewriterx"
 	"github.com/cloudwego/hertz/cmd/hz/thrift"
 	"sort"
 	"strings"
@@ -17,6 +18,15 @@ import (
 	"github.com/cloudwego/thriftgo/parser"
 	"github.com/cloudwego/thriftgo/semantic"
 )
+
+func printTable(data interface{}) {
+	tab := tablewriterx.NewWriter()
+	_ = tab.SetStructs(data)
+	tab.EnableBorder(true)
+	tab.SetAutoWrapText(true)
+	tab.SetTablePadding("  ")
+	tab.Render()
+}
 
 /*---------------------------Import-----------------------------*/
 
@@ -173,8 +183,11 @@ func astToService(ast *parser.Thrift, resolver *Resolver, args *config.Argument)
 				// Annotations:     m.Annotations,
 			}
 			refs := resolver.ExportReferred(false, true)
+
 			method.Models = make(map[string]*model.Model, len(refs))
+
 			for _, ref := range refs {
+				//fmt.Printf("v.Package = %s", method.Models[ref.Model.PackageName])
 				if v, ok := method.Models[ref.Model.PackageName]; ok && (v.Package != ref.Model.Package) {
 					return nil, fmt.Errorf("Package name: %s  redeclared in %s and %s ", ref.Model.PackageName, v.Package, ref.Model.Package)
 				}

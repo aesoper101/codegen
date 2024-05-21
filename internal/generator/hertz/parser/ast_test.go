@@ -1,10 +1,10 @@
 package parser
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aesoper101/codegen/internal/generator/hertz/config"
 	"github.com/aesoper101/x/flagx"
-	"github.com/aesoper101/x/tablewriterx"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -45,14 +45,6 @@ service StudentApi {
 }
 `
 
-func printTable(data interface{}) {
-	tab := tablewriterx.NewWriter()
-	_ = tab.SetStructs(data)
-	tab.EnableBorder(true)
-	tab.SetAutoWrapText(true)
-	tab.SetTablePadding("  ")
-	tab.Render()
-}
 func Test_astToService(t *testing.T) {
 	args := config.NewArgument()
 
@@ -69,16 +61,22 @@ func Test_astToService(t *testing.T) {
 	nArgs, err := args.Parse(fg, "model")
 	require.Nil(t, err)
 
-	fmt.Printf("%+v\n", nArgs)
+	cmd, err := config.BuildPluginCmd(nArgs)
+	require.Nil(t, err)
+	require.NotNil(t, cmd)
+
+	fmt.Printf("%+v\n", cmd.Args)
 
 	p, err := New(WithArgument(nArgs))
 
 	require.Nil(t, err)
 	require.NotNil(t, p)
 
-	services, err := p.Parse()
+	packages, err := p.Parse()
 	require.Nil(t, err)
 
-	printTable(services[0].Methods)
+	printTable(packages[0].Models)
+	jsonData, _ := json.Marshal(packages)
+	fmt.Println(string(jsonData))
 
 }
