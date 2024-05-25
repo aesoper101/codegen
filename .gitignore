@@ -45,6 +45,8 @@ go.work
 !Dockerfile
 !docker-compose.yml
 !.golangci.yml
+!*.thrift
+!*.proto
 
 
 # ...even if they are in subdirectories
