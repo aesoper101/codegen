@@ -10,6 +10,7 @@ import (
 
 func TestNewConverter(t *testing.T) {
 	c := NewConverter()
+
 	err := c.Convert("./testdata")
 
 	require.Nil(t, err)
