@@ -1,9 +1,4 @@
-package parser
-
-import (
-	"github.com/cloudwego/thriftgo/parser"
-	"strings"
-)
+package consts
 
 const (
 	AnnotationQuery    = "api.query"
@@ -37,10 +32,8 @@ const (
 )
 
 const (
-	ApiBaseDomain    = "api.base_domain"
-	ApiServiceGroup  = "api.service_group"
-	ApiServiceGenDir = "api.service_gen_dir" // handler_dir for handler_by_service
-	ApiServicePath   = "api.service_path"    // declare the path to the service's handler according to this annotation for handler_by_method
+	ApiBaseDomain   = "api.base_domain"
+	ApiServiceGroup = "api.service_group"
 )
 
 var (
@@ -53,6 +46,10 @@ var (
 		ApiOptions: "OPTIONS",
 		ApiHEAD:    "HEAD",
 		ApiAny:     "ANY",
+	}
+
+	HttpMethodOptionAnnotations = map[string]string{
+		ApiGenPath: "handler_path",
 	}
 
 	BindingTags = map[string]string{
@@ -71,56 +68,3 @@ var (
 
 	ValidatorTags = map[string]string{AnnotationValidator: "vd"}
 )
-
-func getAnnotation(input parser.Annotations, target string) []string {
-	if len(input) == 0 {
-		return nil
-	}
-	for _, anno := range input {
-		if strings.ToLower(anno.Key) == target {
-			return anno.Values
-		}
-	}
-
-	return []string{}
-}
-
-type httpAnnotation struct {
-	method string
-	path   []string
-}
-
-type httpAnnotations []httpAnnotation
-
-func (s httpAnnotations) Len() int {
-	return len(s)
-}
-
-func (s httpAnnotations) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
-func (s httpAnnotations) Less(i, j int) bool {
-	return s[i].method < s[j].method
-}
-
-func getAnnotations(input parser.Annotations, targets map[string]string) map[string][]string {
-	if len(input) == 0 || len(targets) == 0 {
-		return nil
-	}
-	out := map[string][]string{}
-	for k, t := range targets {
-		var ret *parser.Annotation
-		for _, anno := range input {
-			if strings.ToLower(anno.Key) == k {
-				ret = anno
-				break
-			}
-		}
-		if ret == nil {
-			continue
-		}
-		out[t] = ret.Values
-	}
-	return out
-}

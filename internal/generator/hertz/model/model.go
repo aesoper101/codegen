@@ -2,14 +2,12 @@ package hzmodel
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-
 	"github.com/aesoper101/codegen/internal/generator"
+	"github.com/aesoper101/codegen/pkg/utils"
 	"github.com/aesoper101/x/filex"
 	"github.com/aesoper101/x/golangx"
 	"github.com/charmbracelet/huh"
+	"os/exec"
 )
 
 var _ generator.Generator = (*Generator)(nil)
@@ -21,10 +19,11 @@ type Generator struct {
 }
 
 func New(opts ...ModelGeneratorOption) *Generator {
+	moduleName, _, _ := golangx.SearchGoMod(filex.Getwd())
 	m := &Generator{
 		idlPath: "idl",
 		outPath: "model",
-		modName: golangx.GoModName(),
+		modName: moduleName,
 	}
 	for _, o := range opts {
 		o(m)
@@ -60,20 +59,14 @@ func (m *Generator) Generate() error {
 		return err
 	}
 
-	return filepath.WalkDir(m.idlPath, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
+	files := utils.GetThriftFiles([]string{m.idlPath})
+	for _, f := range files {
+		if err := m.runCmd(f); err != nil {
 			return err
 		}
-		if d.IsDir() {
-			return nil
-		}
+	}
 
-		ext := filepath.Ext(path)
-		if ext == ".thrift" {
-			return m.runCmd(path)
-		}
-		return nil
-	})
+	return nil
 }
 
 func (m *Generator) runCmd(idl string) error {

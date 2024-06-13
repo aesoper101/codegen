@@ -3,7 +3,7 @@ module github.com/aesoper101/codegen
 go 1.22
 
 require (
-	github.com/aesoper101/x v0.1.12
+	github.com/aesoper101/x v0.1.15
 	github.com/charmbracelet/bubbletea v0.26.2
 	github.com/charmbracelet/huh v0.3.0
 	github.com/cloudwego/thriftgo v0.3.12

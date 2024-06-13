@@ -21,10 +21,12 @@ type Generator struct {
 }
 
 func New(opts ...CliGeneratorOption) *Generator {
+	moduleName, _, _ := golangx.SearchGoMod(filex.Getwd())
+
 	m := &Generator{
 		idlPath:  "idl",
 		outPath:  "model",
-		modelMod: golangx.GoModName() + "/model",
+		modelMod: moduleName + "/model",
 	}
 	for _, o := range opts {
 		o(m)

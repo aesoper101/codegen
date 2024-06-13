@@ -11,6 +11,9 @@ struct QueryStudentResponse {
     4: string Msg; // 返回信息，如果没有查询到则返回原因
 }
 
+const i32 STUDENT_LIMIT = 10;
+
+
 struct InsertStudentRequest {
     1: string Num (api.form="num");
     2: string Name (api.form="name");
