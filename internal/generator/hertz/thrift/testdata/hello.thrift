@@ -8,7 +8,11 @@ struct HelloRequest {
     2: common.BaseRequest baseRequest
 }
 
-service HelloService extends common.CommonService{
+service HelloEveryOneService {
+    common.BaseResponse welcome(1: HelloRequest request) (api.get = "/welcome")
+}
+
+service HelloService extends HelloEveryOneService{
     common.BaseResponse hello(1: HelloRequest request) (api.get = "/hello")
     common.BaseResponse hello2(1: string baseRequest) (api.get = "/hello2")
 }

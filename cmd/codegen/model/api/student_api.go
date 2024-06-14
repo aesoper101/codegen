@@ -8,6 +8,10 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
+const (
+	STUDENTLIMIT = 10
+)
+
 type QueryStudentRequest struct {
 	// 学号，通过query参数进行绑定
 	Num int32 `thrift:"Num,1" json:"Num" query:"num" vd:"$<100; msg:'num must less than 100'"`
