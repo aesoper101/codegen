@@ -25,10 +25,11 @@ var (
 )
 
 type Generator struct {
-	idlType       IdlType
-	packagePrefix string
-	idlPaths      []string
-	tplPaths      []string
+	idlType          IdlType
+	packagePrefix    string
+	idlPaths         []string
+	tplPaths         []string
+	defaultTemplates []*File
 }
 
 func New(opts ...Option) (*Generator, error) {
@@ -75,7 +76,7 @@ func (g *Generator) generate(packages []*types.HttpPackage) error {
 		return err
 	}
 
-	var files []*File
+	files := g.defaultTemplates
 
 	for _, c := range tplConfigs {
 		extras := make(Extras)

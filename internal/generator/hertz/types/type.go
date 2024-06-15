@@ -59,6 +59,27 @@ type HttpMethod struct {
 	from *Service
 }
 
+func (m *HttpMethod) GetImports() map[string]string {
+	deps := make(map[string]string)
+	if m.RequestTypePackage != "" {
+		for k, v := range m.from.Imports {
+			if k == m.RequestTypePackage {
+				deps[k] = v
+			}
+		}
+	}
+
+	if m.ReturnTypePackage != "" {
+		for k, v := range m.from.Imports {
+			if k == m.ReturnTypePackage && k != m.RequestTypePackage {
+				deps[k] = v
+			}
+		}
+	}
+
+	return deps
+}
+
 func (m *HttpMethod) GetRequestArgName() string {
 	if m.RequestArgName != "" {
 		return m.RequestArgName

@@ -39,3 +39,10 @@ func WithTplPaths(paths ...string) Option {
 		return nil
 	}
 }
+
+func WithDefaultTemplateFiles(files ...*File) Option {
+	return func(g *Generator) error {
+		g.defaultTemplates = append(g.defaultTemplates, files...)
+		return nil
+	}
+}
