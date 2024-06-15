@@ -6,7 +6,6 @@ import (
 	"github.com/aesoper101/codegen/internal/generator/hertz/types"
 	"github.com/aesoper101/codegen/pkg/utils"
 	"github.com/aesoper101/x/str"
-	"github.com/cloudwego/hertz/cmd/hz/meta"
 	"github.com/cloudwego/thriftgo/generator/backend"
 	"github.com/cloudwego/thriftgo/generator/golang"
 	"github.com/cloudwego/thriftgo/parser"
@@ -62,6 +61,8 @@ var defaultFeatures = golang.Features{
 	SkipEmpty:                   false,
 	NoProcessor:                 false,
 }
+
+var _ types.Convertor = (*Convertor)(nil)
 
 type Convertor struct {
 	cache *Cache
@@ -248,7 +249,7 @@ func (c *Convertor) parseAnnotationToClient(clientMethod *types.ClientMethod, m 
 			clientMethod.QueryParamsCode += fmt.Sprintf("%q: req.Get%s(),\n", field.GetName(), str.ToCamel(field.GoName().String()))
 		}
 	}
-	clientMethod.BodyParamsCode = meta.SetBodyParam
+	clientMethod.BodyParamsCode = consts.SetBodyParam
 	if hasBodyAnnotation && hasFormAnnotation {
 		clientMethod.FormValueCode = ""
 		clientMethod.FormFileCode = ""

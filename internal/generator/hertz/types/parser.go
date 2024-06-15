@@ -1,5 +1,5 @@
 package types
 
-type Parser interface {
-	Parse(files ...string) ([]*HttpPackage, error)
+type Convertor interface {
+	Convert(files ...string) ([]*HttpPackage, error)
 }

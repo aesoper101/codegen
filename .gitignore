@@ -47,6 +47,8 @@ go.work
 !.golangci.yml
 !*.thrift
 !*.proto
+!*.yaml
+!*.yml
 
 
 # ...even if they are in subdirectories

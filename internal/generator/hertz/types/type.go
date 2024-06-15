@@ -38,6 +38,10 @@ func (s *Service) AddHttpMethods(m ...*HttpMethod) {
 	}
 }
 
+func (s *Service) From() *HttpPackage {
+	return s.from
+}
+
 type HttpMethod struct {
 	Name               string
 	HTTPMethod         string

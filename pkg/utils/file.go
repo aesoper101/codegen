@@ -14,6 +14,10 @@ func GetProtoFiles(paths []string) []string {
 	return getFiles(paths, isProtoFile)
 }
 
+func GetYamlFiles(paths []string) []string {
+	return getFiles(paths, isYamlFile)
+}
+
 func getFiles(paths []string, filter func(path string) bool) []string {
 	var files []string
 	for _, path := range paths {
@@ -38,4 +42,12 @@ func isThriftFile(path string) bool {
 
 func isProtoFile(path string) bool {
 	return filepath.Ext(path) == ".proto"
+}
+
+func isYamlFile(path string) bool {
+	base := filepath.Base(path)
+	if base == "idl-ref.yml" || base == "idl-ref.yaml" {
+		return false
+	}
+	return filepath.Ext(path) == ".yaml" || filepath.Ext(path) == ".yml"
 }

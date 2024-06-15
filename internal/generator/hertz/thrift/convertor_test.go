@@ -9,7 +9,7 @@ import (
 
 func TestConvertor_Convert(t *testing.T) {
 	c := NewConvertor("")
-	pkgs, err := c.Convert("./testdata/hello.thrift")
+	pkgs, err := c.Convert("../testdata/hello.thrift")
 
 	require.Nil(t, err)
 	require.Equal(t, 1, len(pkgs))

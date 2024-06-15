@@ -68,3 +68,8 @@ var (
 
 	ValidatorTags = map[string]string{AnnotationValidator: "vd"}
 )
+
+// template const value
+const (
+	SetBodyParam = "setBodyParam(req).\n"
+)

@@ -11,5 +11,5 @@ struct BaseResponse {
 }
 
 service CommonService extends base.BaseService {
-    BaseResponse CommonPing(1: BaseRequest request) (api.get = '/ping');
+    BaseResponse CommonPing(1: BaseRequest request) (api.get = '/commonping');
 }
