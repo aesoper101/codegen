@@ -8,7 +8,10 @@ import (
 )
 
 func TestConvertor_Convert(t *testing.T) {
-	c := NewConvertor("")
+	c, err := NewConvertor()
+	require.Nil(t, err)
+	require.NotNil(t, c)
+
 	pkgs, err := c.Convert("../testdata/hello.thrift")
 
 	require.Nil(t, err)

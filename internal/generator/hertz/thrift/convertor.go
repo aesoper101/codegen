@@ -67,17 +67,29 @@ var _ types.Convertor = (*Convertor)(nil)
 type Convertor struct {
 	cache *Cache
 	cu    *golang.CodeUtils
+	opts  options
 }
 
-func NewConvertor(packagePrefix string) *Convertor {
+func NewConvertor(opts ...Option) (types.Convertor, error) {
 	cu := golang.NewCodeUtils(backend.DummyLogFunc())
-	cu.SetFeatures(defaultFeatures)
-	cu.SetPackagePrefix(packagePrefix)
+	o := options{
+		features: defaultFeatures,
+	}
+
+	if err := o.apply(opts...); err != nil {
+		return nil, err
+	}
+
+	cu.SetFeatures(o.features)
+
+	if o.packagePrefix != "" {
+		cu.SetPackagePrefix(o.packagePrefix)
+	}
 
 	return &Convertor{
 		cache: newIDLCache(cu),
 		cu:    cu,
-	}
+	}, nil
 }
 
 func (c *Convertor) Convert(files ...string) ([]*types.HttpPackage, error) {
