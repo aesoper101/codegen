@@ -1,53 +1,77 @@
 package types
 
-import "github.com/cloudwego/thriftgo/generator/golang/streaming"
+import (
+	"fmt"
+	"github.com/cloudwego/thriftgo/generator/golang/streaming"
+)
 
 // ServiceInfo .
 type ServiceInfo struct {
 	PkgInfo
 	ServiceName           string
 	RawServiceName        string
-	ServiceTypeName       func() string
-	Base                  *ServiceInfo
+	ServiceTypeName       func() string `json:"-"`
 	Methods               []*MethodInfo
-	CombineServices       []*ServiceInfo
 	HasStreaming          bool
 	ServiceFilePath       string
 	Protocol              string
 	HandlerReturnKeepResp bool
 	UseThriftReflection   bool
+
+	from *PackageInfo
 }
 
-// AllMethods returns all methods that the service have.
-func (s *ServiceInfo) AllMethods() (ms []*MethodInfo) {
-	ms = append(ms, s.Methods...)
-	for base := s.Base; base != nil; base = base.Base {
-		ms = append(base.Methods, ms...)
+// Deps .
+func (s *ServiceInfo) Deps() map[string]string {
+	deps := make(map[string]string)
+	for _, m := range s.Methods {
+		for _, a := range m.Args {
+			for _, d := range a.Deps {
+				deps[d.PkgName] = d.ImportPath
+			}
+		}
+
+		if m.Resp != nil {
+			for _, d := range m.Resp.Deps {
+				deps[d.PkgName] = d.ImportPath
+			}
+		}
+
+		for _, e := range m.Exceptions {
+			for _, d := range e.Deps {
+				deps[d.PkgName] = d.ImportPath
+			}
+		}
 	}
-	return ms
+	return deps
 }
 
-// FixHasStreamingForExtendedService updates the HasStreaming field for extended services.
-func (s *ServiceInfo) FixHasStreamingForExtendedService() {
-	if s.Base == nil {
-		return
-	}
-	if s.HasStreaming {
-		return
-	}
-	s.Base.FixHasStreamingForExtendedService()
-	s.HasStreaming = s.Base.HasStreamingRecursive()
+func (s *ServiceInfo) From() *PackageInfo {
+	return s.from
 }
 
-// HasStreamingRecursive recursively check if the service has streaming method
-func (s *ServiceInfo) HasStreamingRecursive() bool {
-	if s.HasStreaming {
-		return true
+func (s *ServiceInfo) AddMethods(methods ...*MethodInfo) error {
+	for _, m := range methods {
+		if m == nil {
+			continue
+		}
+		if s.hasSameMethod(m) {
+			return fmt.Errorf("duplicate method %s in service %s", m.Name, s.ServiceName)
+		}
+		m.from = s
+		s.Methods = append(s.Methods, m)
 	}
-	if s.Base == nil {
-		return false
+
+	return nil
+}
+
+func (s *ServiceInfo) hasSameMethod(m *MethodInfo) bool {
+	for _, v := range s.Methods {
+		if v.Name == m.Name {
+			return true
+		}
 	}
-	return s.Base.HasStreamingRecursive()
+	return false
 }
 
 // MethodInfo .
@@ -69,6 +93,12 @@ type MethodInfo struct {
 	ClientStreaming        bool
 	ServerStreaming        bool
 	Streaming              *streaming.Streaming
+
+	from *ServiceInfo
+}
+
+func (m *MethodInfo) Service() *ServiceInfo {
+	return m.from
 }
 
 // Parameter .

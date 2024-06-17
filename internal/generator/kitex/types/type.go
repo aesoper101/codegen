@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 type File struct {
 	Name          string
 	Content       string
@@ -9,52 +11,62 @@ type File struct {
 
 type PackageInfo struct {
 	Namespace    string            // a dot-separated string for generating service package under kitex_gen
-	Dependencies map[string]string // package name => import path, used for searching imports
-	*ServiceInfo                   // the target service
+	Dependencies map[string]string // import path => alias
+	Services     []*ServiceInfo    // the target service
 
-	// the following fields will be filled and used by the generator
-	Codec            string
-	NoFastAPI        bool
-	Version          string
-	RealServiceName  string
-	Imports          map[string]map[string]bool // import path => alias
-	ExternalKitexGen string
-	Features         []feature
-	FrugalPretouch   bool
-	Module           string
-	Protocol         Protocol
-	IDLName          string
-	ServerPkg        string
+	Imports map[string]map[string]bool // import path => alias
+
+	IdlName string
+	Package string
 }
 
-// AddImport .
-func (p *PackageInfo) AddImport(pkg, path string) {
-	if p.Imports == nil {
-		p.Imports = make(map[string]map[string]bool)
+// AddServices .
+func (p *PackageInfo) AddServices(ss ...*ServiceInfo) error {
+	for _, s := range ss {
+		if s == nil {
+			continue
+		}
+
+		if p.checkServiceName(s.ServiceName) {
+			return fmt.Errorf("duplicate service %s in package %s", s.ServiceName, p.Package)
+		}
+
+		s.from = p
+		p.Services = append(p.Services, s)
 	}
-	if pkg != "" {
-		//if p.ExternalKitexGen != "" && strings.Contains(path, KitexGenPath) {
-		//	parts := strings.Split(path, KitexGenPath)
-		//	path = filepathx.JoinPath(p.ExternalKitexGen, parts[len(parts)-1])
-		//}
-		if path == pkg {
-			p.Imports[path] = nil
-		} else {
-			if p.Imports[path] == nil {
-				p.Imports[path] = make(map[string]bool)
+
+	p.calculateImports()
+	p.calculateDependencies()
+	return nil
+}
+
+func (p *PackageInfo) checkServiceName(name string) bool {
+	for _, s := range p.Services {
+		if s.ServiceName == name {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *PackageInfo) calculateImports() {
+	p.Imports = make(map[string]map[string]bool)
+	for _, s := range p.Services {
+		deps := s.Deps()
+		for k, v := range deps {
+			if _, ok := p.Imports[v]; !ok {
+				p.Imports[v] = make(map[string]bool)
 			}
-			p.Imports[path][pkg] = true
+			p.Imports[v][k] = true
 		}
 	}
 }
 
-// AddImports .
-func (p *PackageInfo) AddImports(pkgs ...string) {
-	for _, pkg := range pkgs {
-		if path, ok := p.Dependencies[pkg]; ok {
-			p.AddImport(pkg, path)
-		} else {
-			p.AddImport(pkg, pkg)
+func (p *PackageInfo) calculateDependencies() {
+	p.Dependencies = make(map[string]string)
+	for _, s := range p.Services {
+		for k, v := range s.Deps() {
+			p.Dependencies[v] = k
 		}
 	}
 }

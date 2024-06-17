@@ -1,4 +1,4 @@
-package thrift
+package utils
 
 import (
 	"cmp"
@@ -9,7 +9,7 @@ import (
 	"log/slog"
 )
 
-type Cache struct {
+type ThriftIDLCache struct {
 	// cache for thrift file. key is file path, value is thrift object
 	cache map[string]*golang.Scope
 
@@ -19,8 +19,8 @@ type Cache struct {
 	checker semantic.Checker
 }
 
-func newIDLCache(cu *golang.CodeUtils) *Cache {
-	return &Cache{
+func NewThriftIDLCache(cu *golang.CodeUtils) *ThriftIDLCache {
+	return &ThriftIDLCache{
 		cache:             make(map[string]*golang.Scope),
 		cu:                cu,
 		checker:           semantic.NewChecker(semantic.Options{FixWarnings: true}),
@@ -28,17 +28,17 @@ func newIDLCache(cu *golang.CodeUtils) *Cache {
 	}
 }
 
-func (c *Cache) GetScope(path string) (*golang.Scope, bool) {
+func (c *ThriftIDLCache) GetScope(path string) (*golang.Scope, bool) {
 	t, ok := c.cache[path]
 	return t, ok
 }
 
-func (c *Cache) GetScopeByAst(ast *parser.Thrift) (*golang.Scope, bool) {
+func (c *ThriftIDLCache) GetScopeByAst(ast *parser.Thrift) (*golang.Scope, bool) {
 	path := ast.GetFilename()
 	return c.GetScope(path)
 }
 
-func (c *Cache) AddFile(filename string) (*golang.Scope, error) {
+func (c *ThriftIDLCache) AddFile(filename string) (*golang.Scope, error) {
 	ast, err := parser.ParseFile(filename, nil, true)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func (c *Cache) AddFile(filename string) (*golang.Scope, error) {
 	return scope, nil
 }
 
-func (c *Cache) deepAdd(astFile *parser.Thrift) (*golang.Scope, error) {
+func (c *ThriftIDLCache) deepAdd(astFile *parser.Thrift) (*golang.Scope, error) {
 	for ast := range astFile.DepthFirstSearch() {
 		if _, err := c.add(ast); err != nil {
 			return nil, err
@@ -82,7 +82,7 @@ func (c *Cache) deepAdd(astFile *parser.Thrift) (*golang.Scope, error) {
 	return c.cache[path], nil
 }
 
-func (c *Cache) add(ast *parser.Thrift) (*golang.Scope, error) {
+func (c *ThriftIDLCache) add(ast *parser.Thrift) (*golang.Scope, error) {
 	path := ast.GetFilename()
 	if scope, ok := c.cache[path]; ok {
 		return scope, nil
@@ -108,7 +108,7 @@ func (c *Cache) add(ast *parser.Thrift) (*golang.Scope, error) {
 	return scope, nil
 }
 
-func (c *Cache) GetWaitProcessScopes() []*golang.Scope {
+func (c *ThriftIDLCache) GetWaitProcessScopes() []*golang.Scope {
 	var scopes []*golang.Scope
 	for _, scope := range c.waitProcessScopes {
 		scopes = append(scopes, scope)

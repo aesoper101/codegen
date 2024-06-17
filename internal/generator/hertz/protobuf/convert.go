@@ -8,8 +8,8 @@ type Convertor struct {
 	packagePrefix string
 }
 
-func NewConvertor(packagePrefix string) *Convertor {
-	return &Convertor{}
+func NewConvertor() (*Convertor, error) {
+	return &Convertor{}, nil
 }
 
 func (c *Convertor) Convert(files ...string) ([]*types.HttpPackage, error) {

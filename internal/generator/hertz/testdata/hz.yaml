@@ -1,4 +1,4 @@
 layouts:
-  - path: "test/a.out"
+  - path: "testdata/output/a.out"
     body: |-
        package {{.FilePackage}}

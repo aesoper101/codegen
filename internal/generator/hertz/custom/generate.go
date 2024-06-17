@@ -53,13 +53,18 @@ func (g *Generator) Name() string {
 
 func (g *Generator) Generate() error {
 	var convertor types.Convertor
+	var err error
 	switch g.idlType {
 	case Proto:
-		convertor = protobuf.NewConvertor(g.packagePrefix)
+		convertor, err = protobuf.NewConvertor()
 	case Thrift:
-		convertor = thrift.NewConvertor(g.packagePrefix)
+		convertor, err = thrift.NewConvertor()
 	default:
 		return ErrNoSupportIdlType
+	}
+
+	if err != nil {
+		return err
 	}
 
 	httpPackages, err := convertor.Convert(g.idlPaths...)

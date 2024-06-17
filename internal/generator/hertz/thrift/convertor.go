@@ -65,7 +65,7 @@ var defaultFeatures = golang.Features{
 var _ types.Convertor = (*Convertor)(nil)
 
 type Convertor struct {
-	cache *Cache
+	cache *utils.ThriftIDLCache
 	cu    *golang.CodeUtils
 	opts  options
 }
@@ -87,7 +87,7 @@ func NewConvertor(opts ...Option) (types.Convertor, error) {
 	}
 
 	return &Convertor{
-		cache: newIDLCache(cu),
+		cache: utils.NewThriftIDLCache(cu),
 		cu:    cu,
 	}, nil
 }
@@ -364,6 +364,30 @@ func (c *Convertor) makeHttpMethod(m *golang.Function, resolver *golang.Resolver
 		Path:               path[0],
 		Serializer:         sr,
 	}, nil
+}
+
+func (c *Convertor) getImports(t *parser.Type) (res []types.PkgInfo) {
+	switch t.Name {
+	case "void":
+		return nil
+	case "bool", "byte", "i8", "i16", "i32", "i64", "double", "string", "binary":
+		return nil
+	case "map":
+		res = append(res, c.getImports(t.KeyType)...)
+		fallthrough
+	case "set", "list":
+		res = append(res, c.getImports(t.ValueType)...)
+		return res
+	default:
+		if ref := t.GetReference(); ref != nil {
+			inc := c.cu.RootScope().Includes().ByIndex(int(ref.GetIndex()))
+			res = append(res, types.PkgInfo{
+				PkgRefName: inc.PackageName,
+				ImportPath: inc.ImportPath,
+			})
+		}
+		return
+	}
 }
 
 func (c *Convertor) getAllExtendFunction(svc *golang.Service, resolver *golang.Resolver) (res []*golang.Function, err error) {
