@@ -15,3 +15,8 @@ service Echo extends hello.HelloService{
     Response echo(1: Request req)
     common.BaseResponse noRequest(1: common.BaseRequest message)
 }
+
+service Echo2 extends hello.HelloService{
+    Response echo(1: Request req)
+    common.BaseResponse noRequest(1: common.BaseRequest message)
+}
