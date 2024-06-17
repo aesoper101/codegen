@@ -17,6 +17,23 @@ type ThriftIDLCache struct {
 
 	cu      *golang.CodeUtils
 	checker semantic.Checker
+
+	// TODO 以下用于解决import问题, 所有获取import的地方都应该从这里获取，包括包名和路径
+	imports       map[string]string
+	importDetails map[string]ImportDetail
+}
+
+type ImportDetail struct {
+	// package name
+	ImportPackage string
+	// import path
+	ImportPath string
+
+	Alias string
+
+	RefPath string
+
+	RefPackage string
 }
 
 func NewThriftIDLCache(cu *golang.CodeUtils) *ThriftIDLCache {

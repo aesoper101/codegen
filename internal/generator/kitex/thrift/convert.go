@@ -253,6 +253,7 @@ func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
 	return mi, nil
 }
 
+// 需要修改
 func (c *Convertor) getImports(t *parser.Type) (res []types.PkgInfo) {
 	switch t.Name {
 	case "void":
