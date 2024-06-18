@@ -8,7 +8,6 @@ import (
 	"github.com/cloudwego/thriftgo/generator/golang/streaming"
 	"github.com/cloudwego/thriftgo/parser"
 	"github.com/cloudwego/thriftgo/semantic"
-	"strings"
 )
 
 var defaultFeatures = golang.Features{
@@ -214,64 +213,76 @@ func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
 	}
 	if !f.Void {
 		typeName := f.ResponseGoTypeName().String()
-		//typeName, err := resolver.GetTypeName(f.Service().From(), f.GetFunctionType())
-		//if err != nil {
-		//	return nil, err
-		//}
 		mi.Resp = &types.Parameter{
-			Deps: c.getImports(f.FunctionType),
+			Deps: c.getImports(resolver, f.Service().From(), f.FunctionType),
 			Type: typeName,
 		}
 		mi.IsResponseNeedRedirect = "*"+typeName == f.ResType().Fields()[0].GoTypeName().String()
 	}
 
 	for _, a := range f.Arguments() {
-		//typeName, err := resolver.GetTypeName(f.Service().From(), a.GetType())
-		//if err != nil {
-		//	return nil, err
-		//}
-
+		typeName, err := c.resolverTypeName(resolver, f.Service().From(), a.GetType())
+		if err != nil {
+			return nil, err
+		}
 		arg := &types.Parameter{
-			Deps:    c.getImports(a.GetType()),
+			Deps:    c.getImports(resolver, f.Service().From(), a.GetType()),
 			Name:    f.ArgType().Field(a.Name).GoName().String(),
 			RawName: a.GoName().String(),
-			Type:    a.GoTypeName().String(),
-			//RawName: ,
-			//Type: typeName.String(),
+			Type:    typeName.String(),
 		}
 		mi.Args = append(mi.Args, arg)
 	}
 	for _, t := range f.Throws() {
+		typeName, err := c.resolverTypeName(resolver, f.Service().From(), t.GetType())
+		if err != nil {
+			return nil, err
+		}
+
 		ex := &types.Parameter{
-			Deps:    c.getImports(t.Type),
+			Deps:    c.getImports(resolver, f.Service().From(), t.Type),
 			Name:    f.ResType().Field(t.Name).GoName().String(),
 			RawName: t.GoName().String(),
-			Type:    t.GoTypeName().String(),
+			Type:    typeName.String(),
 		}
 		mi.Exceptions = append(mi.Exceptions, ex)
 	}
 	return mi, nil
 }
 
-// 需要修改
-func (c *Convertor) getImports(t *parser.Type) (res []types.PkgInfo) {
+func (c *Convertor) resolverTypeName(resolver *golang.Resolver, scope *golang.Scope, t *parser.Type) (golang.TypeName, error) {
+	typeName, err := resolver.GetTypeName(scope, t)
+	if err != nil {
+		return "", err
+	}
+	if t.Category.IsBaseType() {
+		return typeName, nil
+	}
+
+	if t.Category.IsStructLike() {
+		return typeName.Pointerize(), nil
+	}
+
+	return typeName, nil
+}
+
+func (c *Convertor) getImports(resolver *golang.Resolver, scope *golang.Scope, t *parser.Type) (res []types.PkgInfo) {
 	switch t.Name {
 	case "void":
 		return nil
 	case "bool", "byte", "i8", "i16", "i32", "i64", "double", "string", "binary":
 		return nil
 	case "map":
-		res = append(res, c.getImports(t.KeyType)...)
+		res = append(res, c.getImports(resolver, scope, t.KeyType)...)
 		fallthrough
 	case "set", "list":
-		res = append(res, c.getImports(t.ValueType)...)
+		res = append(res, c.getImports(resolver, scope, t.ValueType)...)
 		return res
 	default:
-		if ref := t.GetReference(); ref != nil {
-			inc := c.cu.RootScope().Includes().ByIndex(int(ref.GetIndex()))
+		if scope != c.cu.RootScope() {
 			res = append(res, types.PkgInfo{
-				PkgRefName: inc.PackageName,
-				ImportPath: inc.ImportPath,
+				PkgRefName: c.cu.GetPackageName(scope.AST()),
+				ImportPath: golang.GetImportPath(c.cu, scope.AST()),
 			})
 		}
 		return
@@ -302,10 +313,6 @@ func (c *Convertor) getAllExtendFunction(svc *golang.Service, resolver *golang.R
 			extendSvc := inc.Service(parts[1])
 			if extendSvc != nil {
 				funcs := extendSvc.Functions()
-				for _, f := range res {
-					processExtendsType(f, inc.PackageName)
-				}
-
 				extendFuncs, err := c.getAllExtendFunction(extendSvc, resolver)
 				if err != nil {
 					return nil, err
@@ -316,51 +323,4 @@ func (c *Convertor) getAllExtendFunction(svc *golang.Service, resolver *golang.R
 		return res, nil
 	}
 	return res, nil
-}
-
-func processExtendsType(f *golang.Function, base string) {
-	// the method of other file is extended, and the package of req/resp needs to be changed
-	// ex. axx.common.thrift -> Resp Method(Req){}
-	//					  base.Resp Method(base.Req){}
-	if len(f.GetArguments()) > 0 {
-		if f.GetArguments()[0].Type.Category.IsContainerType() {
-			switch f.GetArguments()[0].Type.Category {
-			case parser.Category_Set, parser.Category_List:
-				if !strings.Contains(f.GetArguments()[0].Type.ValueType.Name, ".") && f.GetArguments()[0].Type.ValueType.Category.IsStruct() {
-					f.GetArguments()[0].Type.ValueType.Name = base + "." + f.GetArguments()[0].Type.ValueType.Name
-				}
-			case parser.Category_Map:
-				if !strings.Contains(f.GetArguments()[0].Type.ValueType.Name, ".") && f.GetArguments()[0].Type.ValueType.Category.IsStruct() {
-					f.GetArguments()[0].Type.ValueType.Name = base + "." + f.GetArguments()[0].Type.ValueType.Name
-				}
-				if !strings.Contains(f.GetArguments()[0].Type.KeyType.Name, ".") && f.GetArguments()[0].Type.KeyType.Category.IsStruct() {
-					f.GetArguments()[0].Type.KeyType.Name = base + "." + f.GetArguments()[0].Type.KeyType.Name
-				}
-			}
-		} else {
-			if !strings.Contains(f.GetArguments()[0].Type.Name, ".") && f.GetArguments()[0].Type.Category.IsStruct() {
-				f.GetArguments()[0].Type.Name = base + "." + f.GetArguments()[0].Type.Name
-			}
-		}
-	}
-
-	if f.FunctionType.Category.IsContainerType() {
-		switch f.FunctionType.Category {
-		case parser.Category_Set, parser.Category_List:
-			if !strings.Contains(f.FunctionType.ValueType.Name, ".") && f.FunctionType.ValueType.Category.IsStruct() {
-				f.FunctionType.ValueType.Name = base + "." + f.FunctionType.ValueType.Name
-			}
-		case parser.Category_Map:
-			if !strings.Contains(f.FunctionType.ValueType.Name, ".") && f.FunctionType.ValueType.Category.IsStruct() {
-				f.FunctionType.ValueType.Name = base + "." + f.FunctionType.ValueType.Name
-			}
-			if !strings.Contains(f.FunctionType.KeyType.Name, ".") && f.FunctionType.KeyType.Category.IsStruct() {
-				f.FunctionType.KeyType.Name = base + "." + f.FunctionType.KeyType.Name
-			}
-		}
-	} else {
-		if !strings.Contains(f.FunctionType.Name, ".") && f.FunctionType.Category.IsStruct() {
-			f.FunctionType.Name = base + "." + f.FunctionType.Name
-		}
-	}
 }
