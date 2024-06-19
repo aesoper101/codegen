@@ -3,7 +3,7 @@ module github.com/aesoper101/codegen
 go 1.22
 
 require (
-	github.com/aesoper101/x v0.1.15
+	github.com/aesoper101/x v0.1.16
 	github.com/apache/thrift v0.13.0
 	github.com/charmbracelet/bubbletea v0.26.2
 	github.com/charmbracelet/huh v0.3.0
@@ -33,7 +33,6 @@ require (
 	github.com/iancoleman/strcase v0.3.0 // indirect
 	github.com/imdario/mergo v0.3.11 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
