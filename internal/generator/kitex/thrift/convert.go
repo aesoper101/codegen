@@ -280,11 +280,26 @@ func (c *Convertor) getImports(resolver *golang.Resolver, scope *golang.Scope, t
 		return res
 	default:
 		if scope != c.cu.RootScope() {
+			typName := golang.TypeName(t.Name).Deref()
+			if typName.IsForeign() {
+				parts := semantic.SplitType(typName.String())
+				if len(parts) == 2 {
+					inc := scope.Includes().ByPackage(parts[0])
+					if inc != nil {
+						res = append(res, types.PkgInfo{
+							PkgRefName: inc.FilePackage(),
+							ImportPath: golang.GetImportPath(c.cu, inc.AST()),
+						})
+					}
+				}
+				return
+			}
 			res = append(res, types.PkgInfo{
 				PkgRefName: c.cu.GetPackageName(scope.AST()),
 				ImportPath: golang.GetImportPath(c.cu, scope.AST()),
 			})
 		}
+
 		return
 	}
 }
