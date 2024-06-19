@@ -258,7 +258,7 @@ func (c *Convertor) resolverTypeName(resolver *golang.Resolver, scope *golang.Sc
 	if t.Category.IsBaseType() {
 		return typeName, nil
 	}
-
+	scope.Includes()
 	if t.Category.IsStructLike() {
 		return typeName.Pointerize(), nil
 	}
