@@ -13,7 +13,7 @@ func TestNewParser(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, c)
 
-	ps, err := c.Parse("../testdata/echo.thrift")
+	ps, err := c.Parse("../testdata/thrift/echo.thrift")
 	require.Nil(t, err)
 	require.Equal(t, 1, len(ps))
 
