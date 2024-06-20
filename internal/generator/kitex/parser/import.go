@@ -2,7 +2,7 @@ package parser
 
 type PkgInfo struct {
 	PkgName    string // PkgA
-	PkgRefName string // PkgA
+	Alias      string // A
 	ImportPath string
 }
 

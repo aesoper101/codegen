@@ -20,4 +20,8 @@ type Method struct {
 	ClientStreaming        bool
 	ServerStreaming        bool
 	Streaming              *streaming.Streaming
+
+	Annotations Annotations
+
+	Deps map[string]string // import path -> alias
 }

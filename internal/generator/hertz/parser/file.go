@@ -11,6 +11,8 @@ type File struct {
 	IDLPath string
 
 	Services []*Service
+
+	Deps map[string]string // import path -> alias
 }
 
 func (f *File) ReferenceName() string {

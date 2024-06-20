@@ -12,4 +12,8 @@ type Service struct {
 	Protocol              string
 	HandlerReturnKeepResp bool
 	UseThriftReflection   bool
+
+	Annotations Annotations
+
+	Deps map[string]string // import path -> alias
 }

@@ -1,4 +1,4 @@
-namespace go hello
+namespace go api.common
 
 include "common.thrift"
 

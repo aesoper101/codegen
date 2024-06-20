@@ -8,13 +8,15 @@ type HttpMethod struct {
 	RequestTypeName    string
 	RequestTypePackage string
 	RequestTypeRawName string
-	RequestDeps        []PkgInfo
 	ReturnTypeName     string
 	ReturnTypePackage  string
 	ReturnTypeRawName  string
-	ReturnDeps         []PkgInfo
 	Path               string
 	Serializer         string
+
+	Deps map[string]string // import path -> alias
+
+	Annotations Annotations
 
 	Service *Service `json:"-"`
 }

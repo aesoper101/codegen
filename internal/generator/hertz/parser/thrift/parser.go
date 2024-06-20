@@ -5,6 +5,7 @@ import (
 	"github.com/aesoper101/codegen/internal/generator/hertz/consts"
 	"github.com/aesoper101/codegen/internal/generator/hertz/parser"
 	"github.com/aesoper101/codegen/pkg/utils"
+	"github.com/aesoper101/x/copierx"
 	"github.com/aesoper101/x/str"
 	"github.com/cloudwego/thriftgo/generator/backend"
 	"github.com/cloudwego/thriftgo/generator/golang"
@@ -111,11 +112,13 @@ func (p *Parser) parse() (pkgs []*parser.Package, err error) {
 	for _, scope := range scopes {
 		p.cu.SetRootScope(scope)
 
-		if pkg, err := p.makePackage(scope); err != nil {
+		if _, err := p.makePackage(scope); err != nil {
 			return nil, err
-		} else {
-			pkgs = append(pkgs, pkg)
 		}
+	}
+
+	for _, pkg := range p.packageCache {
+		pkgs = append(pkgs, pkg)
 	}
 	return
 }
@@ -154,6 +157,7 @@ func (p *Parser) makeFile(pkg *parser.Package, scope *golang.Scope, resolver *go
 	file := &parser.File{
 		Package: pkg,
 		IDLPath: scope.AST().GetFilename(),
+		Deps:    make(map[string]string),
 	}
 
 	for _, service := range scope.Services() {
@@ -162,19 +166,23 @@ func (p *Parser) makeFile(pkg *parser.Package, scope *golang.Scope, resolver *go
 			return nil, err
 		}
 		file.Services = append(file.Services, svc)
+		file.Deps = mergeImports(file.Deps, svc.Deps)
 	}
 
 	return file, nil
 }
 
 func (p *Parser) makeService(file *parser.File, service *golang.Service, resolver *golang.Resolver) (*parser.Service, error) {
+	deps, _ := service.From().ResolveImports()
 	si := &parser.Service{
 		File:          file,
 		Name:          service.GetName(),
+		Comment:       service.GetReservedComments(),
 		Methods:       nil,
 		ClientMethods: nil,
 		BaseDomain:    "",
 		ServiceGroup:  "",
+		Deps:          deps,
 	}
 
 	baseDomainAnnos := utils.GetAnnotation(service.Annotations, consts.ApiBaseDomain)
@@ -217,8 +225,12 @@ func (p *Parser) makeService(file *parser.File, service *golang.Service, resolve
 		clientMethods = append(clientMethods, clientMethod)
 	}
 
+	var annotations parser.Annotations
+	_ = copierx.DeepCopy(service.GetAnnotations(), &annotations)
+
 	si.Methods = httpMethods
 	si.ClientMethods = clientMethods
+	si.Annotations = annotations
 	return si, nil
 }
 
@@ -243,6 +255,7 @@ func (p *Parser) makeHttpMethod(si *parser.Service, m *golang.Function, resolver
 		return nil, fmt.Errorf("invalid api.%s  for %s.%s: %s", hmethod, m.Service().GetName(), m.GetName(), path)
 	}
 
+	deps := make(map[string]string)
 	scope := m.Service().From() // scope of the service, maybe not the root scope
 
 	var reqName, reqRawName, reqPackage, reqArgName string
@@ -270,6 +283,10 @@ func (p *Parser) makeHttpMethod(si *parser.Service, m *golang.Function, resolver
 			}
 			reqRawName = names[1]
 			reqPackage = names[0]
+			reqPth, alisa := getPthBy(p.cu.RootScope(), reqPackage)
+			if reqPth != "" {
+				deps[reqPth] = alisa
+			}
 		}
 	}
 	var respName, respRawName, respPackage string
@@ -291,9 +308,15 @@ func (p *Parser) makeHttpMethod(si *parser.Service, m *golang.Function, resolver
 			// so respRawName='name', respPackage='pkg'
 			respRawName = names[1]
 			respPackage = names[0]
+			respPth, alisa := getPthBy(p.cu.RootScope(), respPackage)
+			if respPth != "" {
+				deps[respPth] = alisa
+			}
 		}
 	}
-	//m.Arguments()[0].GetType()
+
+	var annotations parser.Annotations
+	_ = copierx.DeepCopy(m.GetAnnotations(), &annotations)
 
 	return &parser.HttpMethod{
 		Service:            si,
@@ -304,13 +327,13 @@ func (p *Parser) makeHttpMethod(si *parser.Service, m *golang.Function, resolver
 		RequestTypeName:    reqName,
 		RequestTypeRawName: reqRawName,
 		RequestTypePackage: reqPackage,
-		RequestDeps:        p.getImports(resolver, scope, m.GetArguments()[0].GetType()),
 		ReturnTypeName:     respName,
 		ReturnTypeRawName:  respRawName,
 		ReturnTypePackage:  respPackage,
-		ReturnDeps:         p.getImports(resolver, scope, m.GetFunctionType()),
 		Path:               path[0],
 		Serializer:         sr,
+		Deps:               deps,
+		Annotations:        annotations,
 	}, nil
 }
 
@@ -327,6 +350,7 @@ func (p *Parser) getImports(resolver *golang.Resolver, scope *golang.Scope, t *p
 		res = append(res, p.getImports(resolver, scope, t.ValueType)...)
 		return res
 	default:
+		fmt.Println(p.cu.RootScope().ResolveImports())
 		typName := golang.TypeName(t.Name).Deref()
 		if typName.IsForeign() {
 			parts := semantic.SplitType(typName.String())
@@ -407,7 +431,7 @@ func (p *Parser) resolverTypeName(resolver *golang.Resolver, scope *golang.Scope
 	if t.Category.IsBaseType() {
 		return typeName, nil
 	}
-	scope.Includes()
+
 	if t.Category.IsStructLike() {
 		return typeName.Pointerize(), nil
 	}

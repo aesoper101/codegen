@@ -13,6 +13,8 @@ type File struct {
 	IDLPath string
 
 	Services []*Service
+
+	Deps map[string]string // import path -> alias
 }
 
 func (f *File) ReferenceName() string {
@@ -22,9 +24,3 @@ func (f *File) ReferenceName() string {
 func (f *File) Filename() string {
 	return f.ReferenceName()
 }
-
-//func (f *File) MarshalJSON() ([]byte, error) {
-//	return json.Marshal(f)
-//}
-
-// TODO: 在render时，计算依赖map
