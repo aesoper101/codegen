@@ -1,11 +1,11 @@
-package v2
+package parser
 
 type Service struct {
-	File *File
+	File *File `json:"-"`
 
-	ServiceName           string
-	RawServiceName        string
-	ServiceTypeName       func() string `json:"-"`
+	ServiceName    string
+	RawServiceName string
+	//ServiceTypeName       func() string `json:"-"`
 	Methods               []*Method
 	HasStreaming          bool
 	ServiceFilePath       string

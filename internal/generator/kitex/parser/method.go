@@ -1,9 +1,9 @@
-package v2
+package parser
 
 import "github.com/cloudwego/thriftgo/generator/golang/streaming"
 
 type Method struct {
-	Service *Service
+	Service *Service `json:"-"`
 
 	Name                   string
 	RawName                string

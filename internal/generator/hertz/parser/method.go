@@ -1,4 +1,4 @@
-package v2
+package parser
 
 type HttpMethod struct {
 	Name               string
@@ -8,11 +8,13 @@ type HttpMethod struct {
 	RequestTypeName    string
 	RequestTypePackage string
 	RequestTypeRawName string
+	RequestDeps        []PkgInfo
 	ReturnTypeName     string
 	ReturnTypePackage  string
 	ReturnTypeRawName  string
+	ReturnDeps         []PkgInfo
 	Path               string
 	Serializer         string
 
-	Service *Service
+	Service *Service `json:"-"`
 }

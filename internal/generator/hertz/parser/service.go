@@ -1,6 +1,8 @@
-package v2
+package parser
 
 type Service struct {
+	File *File `json:"-"`
+
 	Name          string
 	Methods       []*HttpMethod
 	ClientMethods []*ClientMethod

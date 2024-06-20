@@ -1,13 +1,14 @@
 package thrift
 
 import (
-	"github.com/aesoper101/codegen/internal/generator/kitex/types"
+	"github.com/aesoper101/codegen/internal/generator/kitex/parser"
 	"github.com/aesoper101/codegen/pkg/utils"
 	"github.com/cloudwego/thriftgo/generator/backend"
 	"github.com/cloudwego/thriftgo/generator/golang"
 	"github.com/cloudwego/thriftgo/generator/golang/streaming"
-	"github.com/cloudwego/thriftgo/parser"
 	"github.com/cloudwego/thriftgo/semantic"
+
+	parser2 "github.com/cloudwego/thriftgo/parser"
 )
 
 var defaultFeatures = golang.Features{
@@ -57,15 +58,16 @@ var defaultFeatures = golang.Features{
 	NoProcessor:                 false,
 }
 
-var _ types.Convertor = (*Convertor)(nil)
+var _ parser.Parser = (*Parser)(nil)
 
-type Convertor struct {
-	opts  options
-	cache *utils.ThriftIDLCache
-	cu    *golang.CodeUtils
+type Parser struct {
+	opts         options
+	cu           *golang.CodeUtils
+	cache        *Cache
+	packageCache map[string]*parser.Package // namespace -> package
 }
 
-func NewConvertor(opts ...Option) (types.Convertor, error) {
+func NewParser(opts ...Option) (*Parser, error) {
 	o := options{
 		features: defaultFeatures,
 	}
@@ -75,123 +77,129 @@ func NewConvertor(opts ...Option) (types.Convertor, error) {
 
 	cu := golang.NewCodeUtils(backend.DummyLogFunc())
 	cu.SetFeatures(o.features)
-
-	if o.packagePrefix != "" {
-		cu.SetPackagePrefix(o.packagePrefix)
+	cu.SetPackagePrefix(o.packagePrefix)
+	if len(o.importReplace) > 0 {
+		for path, repl := range o.importReplace {
+			cu.UsePackage(path, repl)
+		}
 	}
-
-	return &Convertor{
-		opts:  o,
-		cache: utils.NewThriftIDLCache(cu),
-		cu:    cu,
+	return &Parser{
+		opts:         o,
+		cu:           cu,
+		cache:        newThriftIDLCache(cu),
+		packageCache: make(map[string]*parser.Package),
 	}, nil
 }
 
-func (c *Convertor) Convert(files ...string) ([]*types.PackageInfo, error) {
-	fs := utils.GetThriftFiles(files)
-	for _, f := range fs {
-		if _, err := c.cache.AddFile(f); err != nil {
+func (p *Parser) Parse(files ...string) ([]*parser.Package, error) {
+	files = utils.GetThriftFiles(files)
+	for _, file := range files {
+		if _, err := p.cache.AddFile(file); err != nil {
 			return nil, err
 		}
 	}
-	return c.convert()
+
+	return p.parse()
 }
 
-func (c *Convertor) convert() (out []*types.PackageInfo, err error) {
-	for _, scope := range c.cache.GetWaitProcessScopes() {
-		pkg, err := c.convertPackage(scope)
-		if err != nil {
+func (p *Parser) parse() (pkgs []*parser.Package, err error) {
+	scopes := p.cache.GetWaitProcessScopes()
+	for _, scope := range scopes {
+		p.cu.SetRootScope(scope)
+
+		if pkg, err := p.makePackage(scope); err != nil {
 			return nil, err
+		} else {
+			pkgs = append(pkgs, pkg)
 		}
-
-		out = append(out, pkg)
 	}
-	return out, nil
+
+	return pkgs, nil
 }
 
-func (c *Convertor) convertPackage(scope *golang.Scope) (*types.PackageInfo, error) {
-	c.cu.SetRootScope(scope)
-	resolver := golang.NewResolver(scope, c.cu)
+func (p *Parser) makePackage(scope *golang.Scope) (*parser.Package, error) {
+	pkg := p.findOrCreatePackage(scope)
+	resolver := golang.NewResolver(scope, p.cu)
 
-	packageInfo := &types.PackageInfo{
-		Namespace: scope.AST().GetNamespaceOrReferenceName("go"),
-		Package:   scope.FilePackage(),
-		IdlName:   scope.AST().GetFilename(),
-	}
-
-	var services []*types.ServiceInfo
-	for _, service := range scope.Services() {
-		serviceInfo, err := c.convertService(service, resolver)
-		if err != nil {
-			return nil, err
-		}
-
-		services = append(services, serviceInfo)
-	}
-
-	if err := packageInfo.AddServices(services...); err != nil {
-		return nil, err
-	}
-
-	return packageInfo, nil
-}
-
-func (c *Convertor) convertService(service *golang.Service, resolver *golang.Resolver) (*types.ServiceInfo, error) {
-	ast := service.From().AST()
-	pkg, pth := c.cu.Import(ast)
-	pi := types.PkgInfo{
-		PkgName:    pkg,
-		PkgRefName: pkg,
-		ImportPath: pth,
-	}
-
-	serviceInfo := &types.ServiceInfo{
-		ServiceFilePath: ast.GetFilename(),
-		ServiceName:     service.GetName(),
-		RawServiceName:  service.GetName(),
-		PkgInfo:         pi,
-	}
-
-	methods := service.Functions()
-
-	extendMethods, err := c.getAllExtendFunction(service, resolver)
+	file, err := p.makeFile(pkg, scope, resolver)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(extendMethods) > 0 {
-		methods = append(methods, extendMethods...)
+	pkg.Files = append(pkg.Files, file)
+	return pkg, nil
+}
+
+func (p *Parser) findOrCreatePackage(scope *golang.Scope) *parser.Package {
+	namespace := scope.AST().GetNamespaceOrReferenceName("go")
+	if pkg, ok := p.packageCache[namespace]; ok {
+		return pkg
+	}
+	pkg := &parser.Package{
+		ImportPackage: scope.FilePackage(),
+		ImportPath:    golang.GetImportPath(p.cu, scope.AST()),
+		Namespace:     namespace,
+	}
+	p.packageCache[namespace] = pkg
+	return pkg
+}
+
+func (p *Parser) makeFile(pkg *parser.Package, scope *golang.Scope, resolver *golang.Resolver) (*parser.File, error) {
+	file := &parser.File{
+		Package: pkg,
+		IDLPath: scope.AST().GetFilename(),
 	}
 
-	var methodInfos []*types.MethodInfo
-	for _, method := range methods {
-		methodInfo, err := c.convertMethod(serviceInfo, method, resolver)
+	for _, service := range scope.Services() {
+		svc, err := p.makeService(file, service, resolver)
 		if err != nil {
 			return nil, err
 		}
-
-		methodInfos = append(methodInfos, methodInfo)
+		file.Services = append(file.Services, svc)
 	}
 
-	if err := serviceInfo.AddMethods(methodInfos...); err != nil {
+	return file, nil
+}
+
+func (p *Parser) makeService(file *parser.File, service *golang.Service, resolver *golang.Resolver) (*parser.Service, error) {
+	ast := service.From().AST()
+
+	si := &parser.Service{
+		File:            file,
+		ServiceFilePath: ast.GetFilename(),
+		ServiceName:     service.GetName(),
+		RawServiceName:  service.GetName(),
+	}
+
+	methods := service.Functions()
+	extendMethods, err := p.getAllExtendFunction(service, resolver)
+	if err != nil {
 		return nil, err
 	}
 
-	serviceInfo.UseThriftReflection = c.cu.Features().WithReflection
-	serviceInfo.ServiceTypeName = func() string { return serviceInfo.ServiceName }
-	return serviceInfo, nil
+	allMethods := append(methods, extendMethods...)
+
+	for _, method := range allMethods {
+		mi, err := p.makeMethod(si, method, resolver)
+		if err != nil {
+			return nil, err
+		}
+		si.Methods = append(si.Methods, mi)
+	}
+
+	si.UseThriftReflection = p.cu.Features().WithReflection
+
+	return si, nil
 }
 
-func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
-	resolver *golang.Resolver) (*types.MethodInfo, error) {
+func (p *Parser) makeMethod(si *parser.Service, f *golang.Function, resolver *golang.Resolver) (*parser.Method, error) {
 	st, err := streaming.ParseStreaming(f.Function)
 	if err != nil {
 		return nil, err
 	}
 
-	mi := &types.MethodInfo{
-		PkgInfo:            si.PkgInfo,
-		ServiceName:        si.ServiceName,
+	mi := &parser.Method{
+		Service:            si,
 		Name:               f.GoName().String(),
 		RawName:            f.Name,
 		Oneway:             f.Oneway,
@@ -208,25 +216,27 @@ func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
 		si.HasStreaming = true
 	}
 
+	scope := f.Service().From() // scope of the service, maybe not the root scope
+
 	if !f.Oneway {
 		mi.ResStructName = f.ResType().GoName().String()
 	}
 	if !f.Void {
 		typeName := f.ResponseGoTypeName().String()
-		mi.Resp = &types.Parameter{
-			Deps: c.getImports(resolver, f.Service().From(), f.FunctionType),
+		mi.Resp = &parser.Parameter{
+			Deps: p.getImports(resolver, scope, f.FunctionType),
 			Type: typeName,
 		}
 		mi.IsResponseNeedRedirect = "*"+typeName == f.ResType().Fields()[0].GoTypeName().String()
 	}
 
 	for _, a := range f.Arguments() {
-		typeName, err := c.resolverTypeName(resolver, f.Service().From(), a.GetType())
+		typeName, err := p.resolverTypeName(resolver, scope, a.GetType())
 		if err != nil {
 			return nil, err
 		}
-		arg := &types.Parameter{
-			Deps:    c.getImports(resolver, f.Service().From(), a.GetType()),
+		arg := &parser.Parameter{
+			Deps:    p.getImports(resolver, scope, a.GetType()),
 			Name:    f.ArgType().Field(a.Name).GoName().String(),
 			RawName: a.GoName().String(),
 			Type:    typeName.String(),
@@ -234,13 +244,13 @@ func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
 		mi.Args = append(mi.Args, arg)
 	}
 	for _, t := range f.Throws() {
-		typeName, err := c.resolverTypeName(resolver, f.Service().From(), t.GetType())
+		typeName, err := p.resolverTypeName(resolver, scope, t.GetType())
 		if err != nil {
 			return nil, err
 		}
 
-		ex := &types.Parameter{
-			Deps:    c.getImports(resolver, f.Service().From(), t.Type),
+		ex := &parser.Parameter{
+			Deps:    p.getImports(resolver, scope, t.Type),
 			Name:    f.ResType().Field(t.Name).GoName().String(),
 			RawName: t.GoName().String(),
 			Type:    typeName.String(),
@@ -250,7 +260,81 @@ func (c *Convertor) convertMethod(si *types.ServiceInfo, f *golang.Function,
 	return mi, nil
 }
 
-func (c *Convertor) resolverTypeName(resolver *golang.Resolver, scope *golang.Scope, t *parser.Type) (golang.TypeName, error) {
+func (p *Parser) getImports(resolver *golang.Resolver, scope *golang.Scope, t *parser2.Type) (res []parser.PkgInfo) {
+	switch t.Name {
+	case "void":
+		return nil
+	case "bool", "byte", "i8", "i16", "i32", "i64", "double", "string", "binary":
+		return nil
+	case "map":
+		res = append(res, p.getImports(resolver, scope, t.KeyType)...)
+		fallthrough
+	case "set", "list":
+		res = append(res, p.getImports(resolver, scope, t.ValueType)...)
+		return res
+	default:
+		typName := golang.TypeName(t.Name).Deref()
+		if typName.IsForeign() {
+			parts := semantic.SplitType(typName.String())
+			if len(parts) == 2 {
+				inc := scope.Includes().ByPackage(parts[0])
+				if inc != nil {
+					res = append(res, parser.PkgInfo{
+						PkgRefName: inc.FilePackage(),
+						ImportPath: golang.GetImportPath(p.cu, inc.AST()),
+					})
+				}
+			}
+			return
+		}
+		if scope != p.cu.RootScope() {
+			res = append(res, parser.PkgInfo{
+				PkgRefName: p.cu.GetPackageName(scope.AST()),
+				ImportPath: golang.GetImportPath(p.cu, scope.AST()),
+			})
+		}
+
+		return
+	}
+}
+
+func (p *Parser) getAllExtendFunction(svc *golang.Service, resolver *golang.Resolver) (res []*golang.Function, err error) {
+	if len(svc.Extends) == 0 {
+		return
+	}
+	parts := semantic.SplitType(svc.Extends)
+
+	switch len(parts) {
+	case 1:
+		// find the service in the same file
+		extendSvc := svc.From().Service(parts[0])
+		if extendSvc != nil {
+			funcs := extendSvc.Functions()
+			extendFuncs, err := p.getAllExtendFunction(extendSvc, resolver)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, append(funcs, extendFuncs...)...)
+		}
+	case 2:
+		inc := svc.From().Includes().ByPackage(parts[0])
+		if inc != nil {
+			extendSvc := inc.Service(parts[1])
+			if extendSvc != nil {
+				funcs := extendSvc.Functions()
+				extendFuncs, err := p.getAllExtendFunction(extendSvc, resolver)
+				if err != nil {
+					return nil, err
+				}
+				res = append(res, append(funcs, extendFuncs...)...)
+			}
+		}
+		return res, nil
+	}
+	return res, nil
+}
+
+func (p *Parser) resolverTypeName(resolver *golang.Resolver, scope *golang.Scope, t *parser2.Type) (golang.TypeName, error) {
 	typeName, err := resolver.GetTypeName(scope, t)
 	if err != nil {
 		return "", err
@@ -264,78 +348,4 @@ func (c *Convertor) resolverTypeName(resolver *golang.Resolver, scope *golang.Sc
 	}
 
 	return typeName, nil
-}
-
-func (c *Convertor) getImports(resolver *golang.Resolver, scope *golang.Scope, t *parser.Type) (res []types.PkgInfo) {
-	switch t.Name {
-	case "void":
-		return nil
-	case "bool", "byte", "i8", "i16", "i32", "i64", "double", "string", "binary":
-		return nil
-	case "map":
-		res = append(res, c.getImports(resolver, scope, t.KeyType)...)
-		fallthrough
-	case "set", "list":
-		res = append(res, c.getImports(resolver, scope, t.ValueType)...)
-		return res
-	default:
-		if scope != c.cu.RootScope() {
-			typName := golang.TypeName(t.Name).Deref()
-			if typName.IsForeign() {
-				parts := semantic.SplitType(typName.String())
-				if len(parts) == 2 {
-					inc := scope.Includes().ByPackage(parts[0])
-					if inc != nil {
-						res = append(res, types.PkgInfo{
-							PkgRefName: inc.FilePackage(),
-							ImportPath: golang.GetImportPath(c.cu, inc.AST()),
-						})
-					}
-				}
-				return
-			}
-			res = append(res, types.PkgInfo{
-				PkgRefName: c.cu.GetPackageName(scope.AST()),
-				ImportPath: golang.GetImportPath(c.cu, scope.AST()),
-			})
-		}
-
-		return
-	}
-}
-
-func (c *Convertor) getAllExtendFunction(svc *golang.Service, resolver *golang.Resolver) (res []*golang.Function, err error) {
-	if len(svc.Extends) == 0 {
-		return
-	}
-	parts := semantic.SplitType(svc.Extends)
-
-	switch len(parts) {
-	case 1:
-		// find the service in the same file
-		extendSvc := svc.From().Service(parts[0])
-		if extendSvc != nil {
-			funcs := extendSvc.Functions()
-			extendFuncs, err := c.getAllExtendFunction(extendSvc, resolver)
-			if err != nil {
-				return nil, err
-			}
-			res = append(res, append(funcs, extendFuncs...)...)
-		}
-	case 2:
-		inc := svc.From().Includes().ByPackage(parts[0])
-		if inc != nil {
-			extendSvc := inc.Service(parts[1])
-			if extendSvc != nil {
-				funcs := extendSvc.Functions()
-				extendFuncs, err := c.getAllExtendFunction(extendSvc, resolver)
-				if err != nil {
-					return nil, err
-				}
-				res = append(res, append(funcs, extendFuncs...)...)
-			}
-		}
-		return res, nil
-	}
-	return res, nil
 }

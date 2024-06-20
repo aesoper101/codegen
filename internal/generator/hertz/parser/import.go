@@ -1,4 +1,4 @@
-package v2
+package parser
 
 type PkgInfo struct {
 	PkgName    string // PkgA
