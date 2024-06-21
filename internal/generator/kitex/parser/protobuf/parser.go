@@ -6,6 +6,7 @@ import (
 	"github.com/aesoper101/codegen/pkg/utils"
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
+	"strings"
 )
 
 var _ parser.Parser = (*Parser)(nil)
@@ -55,6 +56,7 @@ func (p *Parser) makePackage(file *desc.FileDescriptor) (*parser.Package, error)
 // https://www.cloudwego.io/zh/docs/kitex/tutorials/code-gen/code_generation/#%E4%BD%BF%E7%94%A8-protobuf-idl-%E7%9A%84%E6%B3%A8%E6%84%8F%E4%BA%8B%E9%A1%B9
 func (p *Parser) findOrCreatePackage(file *desc.FileDescriptor) (*parser.Package, error) {
 	namespace := file.GetPackage()
+	namespace = strings.ReplaceAll(namespace, "/", ".")
 	if pkg, ok := p.packageCache[namespace]; ok {
 		return pkg, nil
 	}

@@ -15,9 +15,6 @@ func NewCodegenCommand() *cobra.Command {
 	kxCmd := NewKxCommand()
 
 	hzCmd := NewHzCommand()
-	hzCmd.AddCommand(NewHzModelCommand())
-	hzCmd.AddCommand(NewHzClientCommand())
-	hzCmd.AddCommand(NewHzServerCommand())
 
 	cmd.AddCommand(kxCmd, hzCmd)
 	return cmd
