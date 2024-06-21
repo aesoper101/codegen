@@ -1,4 +1,0 @@
-layouts:
-  - path: "testdata/output/a.out"
-    body: |-
-       package {{.FilePackage}}

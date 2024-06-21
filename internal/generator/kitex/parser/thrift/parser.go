@@ -63,30 +63,23 @@ var defaultFeatures = golang.Features{
 var _ parser.Parser = (*Parser)(nil)
 
 type Parser struct {
-	opts         options
+	opts         *Options
 	cu           *golang.CodeUtils
 	cache        *Cache
 	packageCache map[string]*parser.Package // namespace -> package
 }
 
-func NewParser(opts ...Option) (*Parser, error) {
-	o := options{
-		features: defaultFeatures,
-	}
-	if err := o.apply(opts...); err != nil {
-		return nil, err
-	}
-
+func newParser(opts *Options) (*Parser, error) {
 	cu := golang.NewCodeUtils(backend.DummyLogFunc())
-	cu.SetFeatures(o.features)
-	cu.SetPackagePrefix(o.packagePrefix)
-	if len(o.importReplace) > 0 {
-		for path, repl := range o.importReplace {
+	cu.SetFeatures(opts.Features)
+	cu.SetPackagePrefix(opts.PackagePrefix)
+	if len(opts.ImportReplace) > 0 {
+		for path, repl := range opts.ImportReplace {
 			cu.UsePackage(path, repl)
 		}
 	}
 	return &Parser{
-		opts:         o,
+		opts:         opts,
 		cu:           cu,
 		cache:        newThriftIDLCache(cu),
 		packageCache: make(map[string]*parser.Package),

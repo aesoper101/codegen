@@ -1,15 +1,16 @@
 package protobuf
 
-type options struct {
+import "github.com/aesoper101/codegen/internal/generator/kitex/parser"
+
+var _ parser.Options = (*Options)(nil)
+
+type Options struct {
 }
 
-func (o *options) apply(opts ...Option) error {
-	for _, opt := range opts {
-		if err := opt(o); err != nil {
-			return err
-		}
-	}
-	return nil
+func DefaultOptions() Options {
+	return Options{}
 }
 
-type Option func(*options) error
+func (o *Options) NewParser() (parser.Parser, error) {
+	return newParser(o)
+}

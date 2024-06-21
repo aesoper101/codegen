@@ -1,4 +1,4 @@
-package custom
+package hertz
 
 import (
 	"bytes"

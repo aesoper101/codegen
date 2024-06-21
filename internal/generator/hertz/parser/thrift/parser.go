@@ -67,36 +67,29 @@ var _ parser.Parser = (*Parser)(nil)
 
 type Parser struct {
 	cu           *golang.CodeUtils
-	opts         options
+	opts         *Options
 	cache        *IDLCache
 	packageCache map[string]*parser.Package // namespace -> package
 }
 
-func NewParser(opts ...Option) (*Parser, error) {
-	o := options{
-		features: defaultFeatures,
-	}
-	if err := o.apply(opts...); err != nil {
-		return nil, err
-	}
-
+func newParser(opts *Options) (*Parser, error) {
 	cu := golang.NewCodeUtils(backend.DummyLogFunc())
-	cu.SetFeatures(o.features)
-	cu.SetPackagePrefix(o.packagePrefix)
-	if len(o.importReplace) > 0 {
-		for path, repl := range o.importReplace {
+	cu.SetFeatures(opts.Features)
+	cu.SetPackagePrefix(opts.PackagePrefix)
+	if len(opts.ImportReplace) > 0 {
+		for path, repl := range opts.ImportReplace {
 			cu.UsePackage(path, repl)
 		}
 	}
 	return &Parser{
-		opts:         o,
+		opts:         opts,
 		cu:           cu,
 		cache:        newThriftIDLCache(cu),
 		packageCache: make(map[string]*parser.Package),
 	}, nil
 }
 
-func (p *Parser) Parse(files ...string) ([]*parser.Package, error) {
+func (p *Parser) Parse(files ...string) (parser.Packages, error) {
 	files = utils.GetThriftFiles(files)
 	for _, file := range files {
 		if _, err := p.cache.AddFile(file); err != nil {
@@ -107,7 +100,7 @@ func (p *Parser) Parse(files ...string) ([]*parser.Package, error) {
 	return p.parse()
 }
 
-func (p *Parser) parse() (pkgs []*parser.Package, err error) {
+func (p *Parser) parse() (parser.Packages, error) {
 	scopes := p.cache.GetWaitProcessScopes()
 	for _, scope := range scopes {
 		p.cu.SetRootScope(scope)
@@ -117,10 +110,11 @@ func (p *Parser) parse() (pkgs []*parser.Package, err error) {
 		}
 	}
 
+	pkgs := make(parser.Packages, 0)
 	for _, pkg := range p.packageCache {
 		pkgs = append(pkgs, pkg)
 	}
-	return
+	return pkgs, nil
 }
 
 func (p *Parser) makePackage(scope *golang.Scope) (*parser.Package, error) {

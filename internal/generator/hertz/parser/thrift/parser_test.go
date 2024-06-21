@@ -8,7 +8,9 @@ import (
 )
 
 func TestNewParser(t *testing.T) {
-	c, err := NewParser(PackagePrefix("github.com/aesoper101/xx"))
+	c, err := newParser(&Options{
+		PackagePrefix: "github.com/aesoper101/xx",
+	})
 
 	require.Nil(t, err)
 	require.NotNil(t, c)

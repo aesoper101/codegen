@@ -11,18 +11,13 @@ import (
 var _ parser.Parser = (*Parser)(nil)
 
 type Parser struct {
-	opts         options
+	opts         *Options
 	packageCache map[string]*parser.Package
 }
 
-func NewParser(opts ...Option) (*Parser, error) {
-	o := options{}
-	if err := o.apply(opts...); err != nil {
-		return nil, err
-	}
-
+func newParser(opts *Options) (*Parser, error) {
 	return &Parser{
-		opts:         o,
+		opts:         opts,
 		packageCache: make(map[string]*parser.Package),
 	}, nil
 }
