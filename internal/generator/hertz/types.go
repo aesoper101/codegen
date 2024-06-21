@@ -31,10 +31,11 @@ type CustomizedFileForService struct {
 }
 
 type CustomizedFileForMethod struct {
-	FilePath    string
-	FilePackage string
-	Method      *parser.HttpMethod
-	Extras      Extras // from template
+	FilePath     string
+	FilePackage  string
+	Method       *parser.HttpMethod
+	ClientMethod *parser.ClientMethod
+	Extras       Extras // from template
 	FilePathRenderInfo
 }
 

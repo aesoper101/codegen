@@ -14,3 +14,21 @@ type Service struct {
 
 	Annotations Annotations
 }
+
+func (s *Service) GetMethod(name string) *HttpMethod {
+	for _, m := range s.Methods {
+		if m.Name == name {
+			return m
+		}
+	}
+	return nil
+}
+
+func (s *Service) GetClientMethod(name string) *ClientMethod {
+	for _, m := range s.ClientMethods {
+		if m.Name == name {
+			return m
+		}
+	}
+	return nil
+}

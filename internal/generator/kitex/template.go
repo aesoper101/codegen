@@ -1,13 +1,13 @@
-package hertz
+package kitex
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aesoper101/codegen/internal/generator"
-	"github.com/aesoper101/codegen/internal/generator/hertz/parser"
-	"github.com/aesoper101/codegen/internal/generator/hertz/parser/protobuf"
-	"github.com/aesoper101/codegen/internal/generator/hertz/parser/thrift"
+	"github.com/aesoper101/codegen/internal/generator/kitex/parser"
+	"github.com/aesoper101/codegen/internal/generator/kitex/parser/protobuf"
+	"github.com/aesoper101/codegen/internal/generator/kitex/parser/thrift"
 	"github.com/aesoper101/x/configx"
 )
 

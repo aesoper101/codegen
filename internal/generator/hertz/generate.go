@@ -16,21 +16,13 @@ import (
 var _ generator.Generator = (*Generator)(nil)
 
 type Generator struct {
-	opts           options
 	ctx            context.Context
 	generateConfig *GenerateConfig
 	parser         parser.Parser
 }
 
-func NewGenerator(ctx context.Context, opts ...Option) (*Generator, error) {
-	o := options{
-		configFiles: []string{"./"},
-	}
-	if err := o.apply(opts...); err != nil {
-		return nil, err
-	}
-
-	generateConfig, err := loadConfig(ctx, o.configFiles...)
+func NewGenerator(ctx context.Context, configFiles []string) (*Generator, error) {
+	generateConfig, err := loadConfig(ctx, configFiles...)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +34,6 @@ func NewGenerator(ctx context.Context, opts ...Option) (*Generator, error) {
 
 	return &Generator{
 		ctx:            ctx,
-		opts:           o,
 		parser:         idlParser,
 		generateConfig: generateConfig,
 	}, nil
@@ -111,8 +102,8 @@ func (g *Generator) generateVirtualFiles(tpl *Template, packages parser.Packages
 	switch tpl.Type {
 	case Custom:
 		return g.generateForCustom(tpl, packages)
-	case IDL:
-		return g.generateLoopIDL(tpl, packages)
+	case File:
+		return g.generateLoopFile(tpl, packages)
 	case Package:
 		return g.generateLoopPackage(tpl, packages)
 	case Service:
@@ -179,9 +170,9 @@ func (g *Generator) generateForCustom(tpl *Template, packages parser.Packages) (
 	return files, nil
 }
 
-func (g *Generator) generateLoopIDL(tpl *Template, packages parser.Packages) (files []*generator.File, err error) {
+func (g *Generator) generateLoopFile(tpl *Template, packages parser.Packages) (files []*generator.File, err error) {
 	for _, idl := range packages.Files() {
-		file, err := g.generateForIDL(tpl, idl)
+		file, err := g.generateForFile(tpl, idl)
 		if err != nil {
 			return nil, err
 		}
@@ -192,7 +183,7 @@ func (g *Generator) generateLoopIDL(tpl *Template, packages parser.Packages) (fi
 	return files, nil
 }
 
-func (g *Generator) generateForIDL(tpl *Template, idl *parser.File) (files []*generator.File, err error) {
+func (g *Generator) generateForFile(tpl *Template, idl *parser.File) (files []*generator.File, err error) {
 	renderInfo := FilePathRenderInfo{
 		GoModule:    g.generateConfig.GoModule,
 		ModuleDir:   g.generateConfig.ModuleDir,
@@ -475,6 +466,7 @@ func (g *Generator) generateForService(tpl *Template, service *parser.Service) (
 				FilePath:           filePath,
 				FilePackage:        utils.SplitPackage(filepath.Dir(filePath), ""),
 				Method:             method,
+				ClientMethod:       method.Service.GetClientMethod(method.Name),
 				Extras:             tpl.Extras,
 				FilePathRenderInfo: renderInfo,
 			}
@@ -562,6 +554,7 @@ func (g *Generator) generateForMethod(tpl *Template, method *parser.HttpMethod) 
 		FilePath:           filePath,
 		FilePackage:        utils.SplitPackage(filepath.Dir(filePath), ""),
 		Method:             method,
+		ClientMethod:       method.Service.GetClientMethod(method.Name),
 		Extras:             tpl.Extras,
 		FilePathRenderInfo: renderInfo,
 	}
