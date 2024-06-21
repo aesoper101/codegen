@@ -15,6 +15,8 @@ type File struct {
 	Services []*Service
 
 	Deps map[string]string // import path -> alias
+
+	FileDescriptor interface{}
 }
 
 func (f *File) ReferenceName() string {

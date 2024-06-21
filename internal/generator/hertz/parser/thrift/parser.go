@@ -149,9 +149,10 @@ func (p *Parser) findOrCreatePackage(scope *golang.Scope) *parser.Package {
 
 func (p *Parser) makeFile(pkg *parser.Package, scope *golang.Scope, resolver *golang.Resolver) (*parser.File, error) {
 	file := &parser.File{
-		Package: pkg,
-		IDLPath: scope.AST().GetFilename(),
-		Deps:    make(map[string]string),
+		Package:        pkg,
+		IDLPath:        scope.AST().GetFilename(),
+		Deps:           make(map[string]string),
+		FileDescriptor: scope.AST(),
 	}
 
 	for _, service := range scope.Services() {

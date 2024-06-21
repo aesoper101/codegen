@@ -13,6 +13,8 @@ type File struct {
 	Services []*Service
 
 	Deps map[string]string // import path -> alias
+
+	FileDescriptor interface{} // parsed file descriptor from IDL, such as desc.FileDescriptor Or parser.Thrift
 }
 
 func (f *File) ReferenceName() string {
