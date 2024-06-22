@@ -1,6 +1,7 @@
 package hzmodel
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/cloudwego/thriftgo/args"
@@ -12,8 +13,8 @@ import (
 	"github.com/cloudwego/thriftgo/semantic"
 	"github.com/cloudwego/thriftgo/version"
 	"github.com/stretchr/testify/require"
-	"os"
 	"os/exec"
+	"strings"
 	"testing"
 )
 
@@ -134,13 +135,22 @@ func TestGenerator_Generate2(t *testing.T) {
 
 	// TODO 还是得编写插件才行
 
-	cmd := exec.Command("protoc", "--go_out=.", "--go_opt=paths=source_relative", "--proto_path=./testdata/buf", "-I", "./testdata/buf/hello.proto")
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd := exec.Command("protoc", "--go_out=paths=source_relative:./testdata/output", "--go_opt=paths=source_relative", "-I", "./testdata/buf", "./testdata/buf/hello1.proto")
+	//cmd.Stdin = os.Stdin
+	//cmd.Stdout = os.Stdout
+	//cmd.Stderr = os.Stderr
+	// protoc --go_out=paths=source_relative:./testdata/output --go_opt=paths=source_relative -I ./testdata/buf -Mgoo.api=gitee.com/aaaaa/d/buf1 ./testdata/buf/hello1.proto
+	fmt.Println(strings.Join(cmd.Args, " "))
 
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout // 标准输出
+	cmd.Stderr = &stderr // 标准错误
 	err := cmd.Run()
+	t.Log(err)
 	require.Nil(t, err)
+
+	outStr, errStr := string(stdout.Bytes()), string(stderr.Bytes())
+	fmt.Printf("out:\n%s\nerr:\n%s\n", outStr, errStr)
 
 	//opts := protogen.Options{
 	//	ParamFunc: flag.CommandLine.Set,

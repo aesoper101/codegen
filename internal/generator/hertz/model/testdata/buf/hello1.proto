@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package go.api;
+
+option go_package = "d/buf2";
+
+import "echo.proto";
+
+message HelloRequest1 {
+  string name = 1;
+}
+
+message HelloResponse1 {
+  string message = 1;
+  go.api.HelloRequest request = 2;
+}
+
+service Greeter1 {
+  rpc SayHello (HelloRequest1) returns (HelloResponse1);
+}
