@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/aesoper101/x/filex"
+	"github.com/aesoper101/x/fileutil"
 	"io/fs"
 	"path/filepath"
 )
@@ -21,7 +21,7 @@ func GetYamlFiles(paths []string) []string {
 func getFiles(paths []string, filter func(path string) bool) []string {
 	var files []string
 	for _, path := range paths {
-		if filex.IsDir(path) {
+		if fileutil.IsDir(path) {
 			_ = filepath.Walk(path, func(p string, info fs.FileInfo, err error) error {
 				if !info.IsDir() && filter(p) {
 					files = append(files, p)

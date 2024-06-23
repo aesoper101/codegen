@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/aesoper101/codegen/internal/generator"
 	"github.com/aesoper101/codegen/pkg/utils"
-	"github.com/aesoper101/x/filex"
+	"github.com/aesoper101/x/fileutil"
 	"github.com/aesoper101/x/golangx"
 	"github.com/charmbracelet/huh"
 	"os/exec"
@@ -19,7 +19,7 @@ type Generator struct {
 }
 
 func New(opts ...ModelGeneratorOption) *Generator {
-	moduleName, _, _ := golangx.SearchGoMod(filex.Getwd())
+	moduleName, _, _ := golangx.SearchGoMod(fileutil.Getwd())
 	m := &Generator{
 		idlPath: "idl",
 		outPath: "model",
@@ -32,12 +32,12 @@ func New(opts ...ModelGeneratorOption) *Generator {
 }
 
 func (m *Generator) beforeGenerate() error {
-	if !filex.IsDir(m.idlPath) {
+	if !fileutil.IsDir(m.idlPath) {
 		var idlPath string
 		err := huh.NewInput().
 			Title("Please provide an input directory").
 			Validate(func(s string) error {
-				return filex.MkdirIfNotExist(s)
+				return fileutil.MkdirIfNotExist(s)
 			}).
 			Value(&idlPath).
 			Run()
@@ -47,7 +47,7 @@ func (m *Generator) beforeGenerate() error {
 		m.idlPath = idlPath
 	}
 
-	if err := filex.MkdirIfNotExist(m.outPath); err != nil {
+	if err := fileutil.MkdirIfNotExist(m.outPath); err != nil {
 		return err
 	}
 

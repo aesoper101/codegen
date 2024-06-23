@@ -6,7 +6,7 @@ import (
 	"github.com/aesoper101/codegen/internal/generator/hertz/parser"
 	"github.com/aesoper101/codegen/pkg/utils"
 	"github.com/aesoper101/x/copierx"
-	"github.com/aesoper101/x/str"
+	"github.com/aesoper101/x/stringutil"
 	"github.com/cloudwego/thriftgo/generator/backend"
 	"github.com/cloudwego/thriftgo/generator/golang"
 	parser2 "github.com/cloudwego/thriftgo/parser"
@@ -449,7 +449,7 @@ func (p *Parser) parseAnnotationToClient(clientMethod *parser.ClientMethod, m *g
 			hasAnnotation = true
 			//query := str.ToSnake(anno[0])
 			query := anno[0]
-			clientMethod.QueryParamsCode += fmt.Sprintf("%q: req.Get%s(),\n", query, str.ToCamel(field.GoName().String()))
+			clientMethod.QueryParamsCode += fmt.Sprintf("%q: req.Get%s(),\n", query, stringutil.ToCamel(field.GoName().String()))
 		}
 
 		if anno := utils.GetAnnotation(field.Annotations, consts.AnnotationPath); len(anno) > 0 {
@@ -494,11 +494,11 @@ func (p *Parser) parseAnnotationToClient(clientMethod *parser.ClientMethod, m *g
 			fileName := anno[0]
 			hasFormAnnotation = true
 
-			clientMethod.FormFileCode += fmt.Sprintf("%q: req.Get%s(),\n", fileName, str.
+			clientMethod.FormFileCode += fmt.Sprintf("%q: req.Get%s(),\n", fileName, stringutil.
 				ToCamel(field.GoName().String()))
 		}
 		if !hasAnnotation && strings.EqualFold(clientMethod.HTTPMethod, "get") {
-			clientMethod.QueryParamsCode += fmt.Sprintf("%q: req.Get%s(),\n", field.GetName(), str.ToCamel(field.GoName().String()))
+			clientMethod.QueryParamsCode += fmt.Sprintf("%q: req.Get%s(),\n", field.GetName(), stringutil.ToCamel(field.GoName().String()))
 		}
 	}
 	clientMethod.BodyParamsCode = consts.SetBodyParam

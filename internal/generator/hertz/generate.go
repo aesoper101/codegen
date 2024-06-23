@@ -7,7 +7,7 @@ import (
 	"github.com/aesoper101/codegen/internal/generator"
 	"github.com/aesoper101/codegen/internal/generator/hertz/parser"
 	"github.com/aesoper101/codegen/pkg/utils"
-	"github.com/aesoper101/x/filex"
+	"github.com/aesoper101/x/fileutil"
 	"log/slog"
 	"path/filepath"
 	"strings"
@@ -74,7 +74,7 @@ func (g *Generator) Generate() error {
 // 生成实际文件
 func (g *Generator) generateFiles(files []*generator.File) error {
 	for _, file := range files {
-		if err := filex.CreateFileFromString(file.Name, true, file.Content); err != nil {
+		if err := fileutil.CreateFileFromString(file.Name, true, file.Content); err != nil {
 			return err
 		}
 	}
@@ -85,11 +85,11 @@ func (g *Generator) generateFiles(files []*generator.File) error {
 func (g *Generator) rollbackFiles(files []*generator.File) error {
 	for _, file := range files {
 		if file.IsNew {
-			if err := filex.DeleteFile(file.Name); err != nil {
+			if err := fileutil.DeleteFile(file.Name); err != nil {
 				return err
 			}
 		} else {
-			if err := filex.CreateFileFromString(file.Name, true, file.BackupContent); err != nil {
+			if err := fileutil.CreateFileFromString(file.Name, true, file.BackupContent); err != nil {
 				return err
 			}
 		}
@@ -134,7 +134,7 @@ func (g *Generator) generateForCustom(tpl *Template, packages parser.Packages) (
 		FilePathRenderInfo: renderInfo,
 	}
 
-	fileAlreadyExists := filex.IsExists(filePath)
+	fileAlreadyExists := fileutil.IsExists(filePath)
 	var content, oldContent string
 	if fileAlreadyExists {
 		oldContent, err = readFileContent(filePath)
@@ -205,7 +205,7 @@ func (g *Generator) generateForFile(tpl *Template, idl *parser.File) (files []*g
 		FilePathRenderInfo: renderInfo,
 	}
 
-	fileAlreadyExists := filex.IsExists(filePath)
+	fileAlreadyExists := fileutil.IsExists(filePath)
 	var content, oldContent string
 	if fileAlreadyExists {
 		oldContent, err = readFileContent(filePath)
@@ -322,7 +322,7 @@ func (g *Generator) generateForPackage(tpl *Template, pkgInfo *parser.Package) (
 		FilePathRenderInfo: renderInfo,
 	}
 
-	fileAlreadyExists := filex.IsExists(filePath)
+	fileAlreadyExists := fileutil.IsExists(filePath)
 	var content, oldContent string
 	if fileAlreadyExists {
 		oldContent, err = readFileContent(filePath)
@@ -438,7 +438,7 @@ func (g *Generator) generateForService(tpl *Template, service *parser.Service) (
 		FilePathRenderInfo: renderInfo,
 	}
 
-	fileAlreadyExists := filex.IsExists(filePath)
+	fileAlreadyExists := fileutil.IsExists(filePath)
 	var content, oldContent string
 	if fileAlreadyExists {
 		oldContent, err = readFileContent(filePath)
@@ -559,7 +559,7 @@ func (g *Generator) generateForMethod(tpl *Template, method *parser.HttpMethod) 
 		FilePathRenderInfo: renderInfo,
 	}
 
-	fileAlreadyExists := filex.IsExists(filePath)
+	fileAlreadyExists := fileutil.IsExists(filePath)
 	var content, oldContent string
 	if fileAlreadyExists {
 		oldContent, err = readFileContent(filePath)

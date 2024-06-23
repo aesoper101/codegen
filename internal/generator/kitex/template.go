@@ -8,7 +8,7 @@ import (
 	"github.com/aesoper101/codegen/internal/generator/kitex/parser"
 	"github.com/aesoper101/codegen/internal/generator/kitex/parser/protobuf"
 	"github.com/aesoper101/codegen/internal/generator/kitex/parser/thrift"
-	"github.com/aesoper101/x/configx"
+	"github.com/aesoper101/x/configext"
 )
 
 type GenerateMode string
@@ -146,7 +146,7 @@ func (config *GenerateConfig) UnmarshalJSON(data []byte) error {
 }
 
 func loadConfig(ctx context.Context, files ...string) (*GenerateConfig, error) {
-	configProvider, err := configx.New(ctx, configx.EnableEnvLoading(""), configx.WithConfigFiles(files...))
+	configProvider, err := configext.New(ctx, configext.EnableEnvLoading(""), configext.WithConfigFiles(files...))
 	if err != nil {
 		return nil, err
 	}
